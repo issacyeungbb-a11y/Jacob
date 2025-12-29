@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { BabyLog, LogType, FeedLog, SleepLog } from './types';
-import { subscribeToLogs, addLogToCloud, deleteLogFromCloud, exportLogsToJSON } from './services/storageService';
+import { subscribeToLogs, subscribeToSleepStatus, addLogToCloud, deleteLogFromCloud, exportLogsToJSON, setSleepStatus, clearSleepStatus } from './services/storageService';
 import { isConfigured } from './services/firebase'; // Import configuration check
 import { generateBabyInsights } from './services/geminiService';
 import { Dashboard } from './components/Dashboard';
@@ -60,16 +60,23 @@ const App: React.FC = () => {
   };
 
   const [logs, setLogs] = useState<BabyLog[]>([]);
+  const [sleepStartTime, setSleepStartTime] = useState<string | null>(null);
   const [insight, setInsight] = useState<string>("");
   const [loadingInsight, setLoadingInsight] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(getLocalDateString(new Date()));
 
   // 啟動時訂閱雲端資料
   useEffect(() => {
-    const unsubscribe = subscribeToLogs((updatedLogs) => {
+    const unsubscribeLogs = subscribeToLogs((updatedLogs) => {
       setLogs(updatedLogs);
     });
-    return () => unsubscribe();
+    const unsubscribeSleep = subscribeToSleepStatus((startTime) => {
+      setSleepStartTime(startTime);
+    });
+    return () => {
+      unsubscribeLogs();
+      unsubscribeSleep();
+    };
   }, []);
 
   // 新增時直接傳到雲端
@@ -77,6 +84,21 @@ const App: React.FC = () => {
     addLogToCloud(newLog);
     // 如果新增的日期不是當前選擇的日期，自動切換到新增的那一天 (UX 優化)
     const logDate = getLocalDateString(new Date(newLog.timestamp));
+    if (logDate !== selectedDate) {
+      setSelectedDate(logDate);
+    }
+  };
+
+  // 處理睡眠狀態變更
+  const handleSleepStart = (startTime: string) => {
+    setSleepStatus(startTime);
+  };
+
+  const handleSleepEnd = (log: BabyLog) => {
+    addLogToCloud(log);
+    clearSleepStatus();
+    // 自動切換到記錄日期
+    const logDate = getLocalDateString(new Date(log.timestamp));
     if (logDate !== selectedDate) {
       setSelectedDate(logDate);
     }
@@ -163,13 +185,23 @@ const App: React.FC = () => {
         </div>
         
         {/* Main Dashboard (Always shows TODAY's snapshot) */}
-        <Dashboard logs={logs} />
+        <Dashboard 
+          logs={logs} 
+          isSleeping={!!sleepStartTime} 
+          sleepStartTime={sleepStartTime}
+        />
       </header>
 
       <main className="px-5 space-y-8">
         {/* Input Form */}
         <section>
-          <LogForm onAddLog={handleAddLog} />
+          <LogForm 
+            onAddLog={handleAddLog} 
+            isSleeping={!!sleepStartTime}
+            sleepStartTime={sleepStartTime}
+            onStartSleep={handleSleepStart}
+            onEndSleep={handleSleepEnd}
+          />
         </section>
 
         {/* AI Insight Section */}

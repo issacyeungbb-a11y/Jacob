@@ -11,16 +11,20 @@ import {
 import { BabyLog } from '../types';
 
 const COLLECTION_NAME = 'jacob_logs';
+const STATUS_DOC_ID = 'status_sleep'; // Special document to track active sleep
 
 // 監聽資料庫變更 (即時同步)
 export const subscribeToLogs = (onUpdate: (logs: BabyLog[]) => void) => {
+  // Filter out the status document from the main log list
   const q = query(collection(db, COLLECTION_NAME), orderBy("timestamp", "desc"));
   
-  // onSnapshot 會在資料庫有任何變動時自動觸發
   const unsubscribe = onSnapshot(q, (snapshot) => {
     const logs: BabyLog[] = [];
     snapshot.forEach((doc) => {
-      logs.push(doc.data() as BabyLog);
+      // Skip special status documents
+      if (doc.id !== STATUS_DOC_ID) {
+        logs.push(doc.data() as BabyLog);
+      }
     });
     onUpdate(logs);
   }, (error) => {
@@ -28,6 +32,36 @@ export const subscribeToLogs = (onUpdate: (logs: BabyLog[]) => void) => {
   });
 
   return unsubscribe;
+};
+
+// 監聽睡眠狀態
+export const subscribeToSleepStatus = (onUpdate: (startTime: string | null) => void) => {
+  const unsubscribe = onSnapshot(doc(db, COLLECTION_NAME, STATUS_DOC_ID), (doc) => {
+    if (doc.exists() && doc.data().startTime) {
+      onUpdate(doc.data().startTime);
+    } else {
+      onUpdate(null);
+    }
+  });
+  return unsubscribe;
+};
+
+// 設定開始睡眠
+export const setSleepStatus = async (startTime: string) => {
+  try {
+    await setDoc(doc(db, COLLECTION_NAME, STATUS_DOC_ID), { startTime });
+  } catch (e) {
+    console.error("Error setting sleep status:", e);
+  }
+};
+
+// 清除睡眠狀態 (起床)
+export const clearSleepStatus = async () => {
+  try {
+    await deleteDoc(doc(db, COLLECTION_NAME, STATUS_DOC_ID));
+  } catch (e) {
+    console.error("Error clearing sleep status:", e);
+  }
 };
 
 // 新增記錄 (上傳雲端)
