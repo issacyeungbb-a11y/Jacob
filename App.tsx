@@ -6,6 +6,7 @@ import { generateBabyInsights } from './services/geminiService';
 import { Dashboard } from './components/Dashboard';
 import { LogForm } from './components/LogForm';
 import { LogList } from './components/LogList';
+import { TrendsChart } from './components/TrendsChart';
 import { Sparkles, Download, Baby, CloudLightning, Settings, ExternalLink, Calendar, ChevronLeft, ChevronRight, Milk, Moon, Layers } from 'lucide-react';
 import { BABY_NAME, BIRTH_DATE } from './constants';
 
@@ -254,6 +255,11 @@ const App: React.FC = () => {
           </div>
 
           <LogList logs={filteredLogs} onDeleteLog={handleDeleteLog} />
+        </section>
+
+        {/* Trends Chart Section (NEW) */}
+        <section>
+          <TrendsChart logs={logs} />
         </section>
 
         {/* Settings / Tools */}
