@@ -47,7 +47,7 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog }) => {
   return (
     <div className="space-y-3">
       {sortedLogs.map((log) => (
-        <div key={log.id} className="bg-white p-4 rounded-xl shadow-sm flex items-center justify-between">
+        <div key={log.id} className="bg-white p-4 rounded-xl shadow-sm flex items-center justify-between animate-fade-in">
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-full bg-gray-50`}>
               {getIcon(log.type)}
@@ -71,8 +71,8 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog }) => {
         </div>
       ))}
       {sortedLogs.length === 0 && (
-        <div className="text-center text-gray-400 py-8">
-          暫無記錄。開始記錄 Jacob 的成長歷程吧！
+        <div className="text-center text-gray-400 py-8 bg-white rounded-xl border border-dashed border-gray-200">
+          <p className="text-sm">這一天沒有記錄。</p>
         </div>
       )}
     </div>

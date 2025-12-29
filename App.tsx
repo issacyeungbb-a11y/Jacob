@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { BabyLog } from './types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { BabyLog, LogType, FeedLog, SleepLog } from './types';
 import { subscribeToLogs, addLogToCloud, deleteLogFromCloud, exportLogsToJSON } from './services/storageService';
 import { isConfigured } from './services/firebase'; // Import configuration check
 import { generateBabyInsights } from './services/geminiService';
 import { Dashboard } from './components/Dashboard';
 import { LogForm } from './components/LogForm';
 import { LogList } from './components/LogList';
-import { Sparkles, Download, Baby, CloudLightning, Settings, ExternalLink } from 'lucide-react';
+import { Sparkles, Download, Baby, CloudLightning, Settings, ExternalLink, Calendar, ChevronLeft, ChevronRight, Milk, Moon, Layers } from 'lucide-react';
 import { BABY_NAME, BIRTH_DATE } from './constants';
 
 const App: React.FC = () => {
@@ -52,24 +52,33 @@ const App: React.FC = () => {
     );
   }
 
+  // Helper: Get Local ISO Date string (YYYY-MM-DD)
+  const getLocalDateString = (date: Date) => {
+    const offset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offset).toISOString().split('T')[0];
+  };
+
   const [logs, setLogs] = useState<BabyLog[]>([]);
   const [insight, setInsight] = useState<string>("");
   const [loadingInsight, setLoadingInsight] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string>(getLocalDateString(new Date()));
 
   // 啟動時訂閱雲端資料
   useEffect(() => {
-    // 當雲端資料有變動，這裡會自動執行，更新畫面
     const unsubscribe = subscribeToLogs((updatedLogs) => {
       setLogs(updatedLogs);
     });
-
-    // 組件卸載時取消訂閱
     return () => unsubscribe();
   }, []);
 
   // 新增時直接傳到雲端
   const handleAddLog = (newLog: BabyLog) => {
     addLogToCloud(newLog);
+    // 如果新增的日期不是當前選擇的日期，自動切換到新增的那一天 (UX 優化)
+    const logDate = getLocalDateString(new Date(newLog.timestamp));
+    if (logDate !== selectedDate) {
+      setSelectedDate(logDate);
+    }
   };
 
   // 刪除時直接通知雲端
@@ -86,6 +95,36 @@ const App: React.FC = () => {
     setInsight(result);
     setLoadingInsight(false);
   };
+
+  // Change Date Helper
+  const changeDate = (days: number) => {
+    const date = new Date(selectedDate);
+    date.setDate(date.getDate() + days);
+    setSelectedDate(getLocalDateString(date));
+  };
+
+  // Filter logs based on selected date
+  const filteredLogs = useMemo(() => {
+    return logs.filter(log => {
+      const logDateStr = getLocalDateString(new Date(log.timestamp));
+      return logDateStr === selectedDate;
+    });
+  }, [logs, selectedDate]);
+
+  // Calculate stats for the selected date
+  const dailyStats = useMemo(() => {
+    const totalMilk = filteredLogs
+      .filter(l => l.type === LogType.FEED)
+      .reduce((sum, l) => sum + ((l as FeedLog).amountMl || 0), 0);
+
+    const totalSleepMinutes = filteredLogs
+      .filter(l => l.type === LogType.SLEEP)
+      .reduce((sum, l) => sum + ((l as SleepLog).durationMinutes || 0), 0);
+    
+    const diaperCount = filteredLogs.filter(l => l.type === LogType.DIAPER).length;
+
+    return { totalMilk, totalSleepMinutes, diaperCount };
+  }, [filteredLogs]);
 
   // Calculate Age
   const birth = new Date(BIRTH_DATE);
@@ -122,10 +161,11 @@ const App: React.FC = () => {
           </div>
         </div>
         
+        {/* Main Dashboard (Always shows TODAY's snapshot) */}
         <Dashboard logs={logs} />
       </header>
 
-      <main className="px-5 space-y-6">
+      <main className="px-5 space-y-8">
         {/* Input Form */}
         <section>
           <LogForm onAddLog={handleAddLog} />
@@ -159,10 +199,61 @@ const App: React.FC = () => {
            )}
         </section>
 
-        {/* Recent History */}
+        {/* History & Logs Section */}
         <section>
-          <h2 className="font-bold text-gray-800 text-lg mb-3">最近記錄</h2>
-          <LogList logs={logs} onDeleteLog={handleDeleteLog} />
+          <div className="flex items-center justify-between mb-4">
+             <h2 className="font-bold text-gray-800 text-lg flex items-center gap-2">
+               <Calendar className="w-5 h-5 text-gray-600" />
+               歷史記錄
+             </h2>
+          </div>
+
+          {/* Date Picker Control */}
+          <div className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 mb-4 flex items-center justify-between">
+            <button onClick={() => changeDate(-1)} className="p-2 hover:bg-gray-100 rounded-xl text-gray-500">
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <div className="relative">
+              <input 
+                type="date" 
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="font-bold text-gray-700 bg-transparent border-none focus:ring-0 text-center text-lg outline-none cursor-pointer"
+              />
+            </div>
+            <button onClick={() => changeDate(1)} className="p-2 hover:bg-gray-100 rounded-xl text-gray-500" disabled={selectedDate >= getLocalDateString(new Date())}>
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Daily Mini Stats */}
+          <div className="grid grid-cols-3 gap-2 mb-4">
+             <div className="bg-blue-50 rounded-xl p-2 flex flex-col items-center justify-center border border-blue-100">
+                <div className="flex items-center gap-1 mb-1">
+                   <Milk className="w-3 h-3 text-blue-400" />
+                   <span className="text-[10px] text-blue-400 font-bold uppercase">奶量</span>
+                </div>
+                <span className="text-sm font-black text-blue-700">{dailyStats.totalMilk} ml</span>
+             </div>
+             <div className="bg-indigo-50 rounded-xl p-2 flex flex-col items-center justify-center border border-indigo-100">
+                <div className="flex items-center gap-1 mb-1">
+                   <Moon className="w-3 h-3 text-indigo-400" />
+                   <span className="text-[10px] text-indigo-400 font-bold uppercase">睡眠</span>
+                </div>
+                <span className="text-sm font-black text-indigo-700">
+                   {Math.floor(dailyStats.totalSleepMinutes / 60)}h {dailyStats.totalSleepMinutes % 60}m
+                </span>
+             </div>
+             <div className="bg-amber-50 rounded-xl p-2 flex flex-col items-center justify-center border border-amber-100">
+                <div className="flex items-center gap-1 mb-1">
+                   <Layers className="w-3 h-3 text-amber-400" />
+                   <span className="text-[10px] text-amber-400 font-bold uppercase">換片</span>
+                </div>
+                <span className="text-sm font-black text-amber-700">{dailyStats.diaperCount}</span>
+             </div>
+          </div>
+
+          <LogList logs={filteredLogs} onDeleteLog={handleDeleteLog} />
         </section>
 
         {/* Settings / Tools */}
