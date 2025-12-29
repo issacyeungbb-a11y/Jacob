@@ -12,7 +12,16 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       outDir: 'dist',
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom', 'firebase/app', 'firebase/firestore'],
+            ui: ['lucide-react'],
+            genai: ['@google/genai']
+          }
+        }
+      }
     },
-    publicDir: 'public' // We will treat the root as public for simplicity in this setup if needed, or stick to standard
+    publicDir: 'public' 
   };
 });
