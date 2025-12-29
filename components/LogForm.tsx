@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LogType, FeedType, DiaperType, BabyLog } from '../types';
-import { PlusCircle, Clock, CalendarDays } from 'lucide-react';
+import { PlusCircle, CalendarDays, Moon, ArrowRight } from 'lucide-react';
 
 interface LogFormProps {
   onAddLog: (log: BabyLog) => void;
@@ -9,65 +9,99 @@ interface LogFormProps {
 export const LogForm: React.FC<LogFormProps> = ({ onAddLog }) => {
   const [activeType, setActiveType] = useState<LogType>(LogType.FEED);
   
-  // Form States
-  const [amount, setAmount] = useState<number>(120);
-  const [feedType, setFeedType] = useState<FeedType>(FeedType.FORMULA);
-  const [diaperStatus, setDiaperStatus] = useState<DiaperType>(DiaperType.WET);
-  const [sleepDuration, setSleepDuration] = useState<number>(60);
-  const [weight, setWeight] = useState<number>(3.5);
-  const [height, setHeight] = useState<number>(50);
-  const [headCirc, setHeadCirc] = useState<number>(35);
-  const [otherDetails, setOtherDetails] = useState<string>("");
-  
   // Time helper
   const toLocalISO = (date: Date) => {
     const offset = date.getTimezoneOffset() * 60000;
     return new Date(date.getTime() - offset).toISOString().slice(0, 16);
   };
 
+  // Form States
+  const [amount, setAmount] = useState<number>(120);
+  const [feedType, setFeedType] = useState<FeedType>(FeedType.FORMULA);
+  const [diaperStatus, setDiaperStatus] = useState<DiaperType>(DiaperType.WET);
+  
+  // Sleep specific states
+  const [sleepStart, setSleepStart] = useState<string>(toLocalISO(new Date(Date.now() - 60 * 60 * 1000)));
+  const [sleepEnd, setSleepEnd] = useState<string>(toLocalISO(new Date()));
+
+  const [weight, setWeight] = useState<number>(3.5);
+  const [height, setHeight] = useState<number>(50);
+  const [headCirc, setHeadCirc] = useState<number>(35);
+  const [otherDetails, setOtherDetails] = useState<string>("");
+  
   const [date, setDate] = useState<string>(toLocalISO(new Date()));
 
-  // Quick Time Adjustments
+  // Quick Time Adjustments (Only for non-sleep logs)
   const setQuickTime = (minutesOffset: number) => {
     const now = new Date();
     now.setMinutes(now.getMinutes() + minutesOffset);
     setDate(toLocalISO(now));
   };
+  
+  // Update sleep end time default when opening the app (optional, but good UX)
+  useEffect(() => {
+    const now = new Date();
+    setSleepEnd(toLocalISO(now));
+    setSleepStart(toLocalISO(new Date(now.getTime() - 60 * 60 * 1000)));
+  }, []);
+
+  const getSleepDuration = () => {
+    const start = new Date(sleepStart).getTime();
+    const end = new Date(sleepEnd).getTime();
+    const diffMins = Math.floor((end - start) / (1000 * 60));
+    return diffMins;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const baseLog = {
-      id: Date.now().toString(),
-      timestamp: new Date(date).toISOString(),
-    };
-
     let newLog: BabyLog;
+    const id = Date.now().toString();
 
-    switch (activeType) {
-      case LogType.FEED:
-        newLog = { ...baseLog, type: LogType.FEED, amountMl: Number(amount), feedType } as any;
-        break;
-      case LogType.DIAPER:
-        newLog = { ...baseLog, type: LogType.DIAPER, status: diaperStatus } as any;
-        break;
-      case LogType.SLEEP:
-        newLog = { ...baseLog, type: LogType.SLEEP, durationMinutes: Number(sleepDuration) } as any;
-        break;
-      case LogType.HEALTH:
-        newLog = { ...baseLog, type: LogType.HEALTH, weightKg: Number(weight), heightCm: Number(height), headCircumferenceCm: Number(headCirc) } as any;
-        break;
-      case LogType.OTHER:
-        newLog = { ...baseLog, type: LogType.OTHER, details: otherDetails } as any;
-        break;
-      default:
-        return;
+    if (activeType === LogType.SLEEP) {
+        const duration = getSleepDuration();
+        if (duration <= 0) {
+            alert("結束時間必須晚於開始時間");
+            return;
+        }
+        newLog = {
+            id,
+            timestamp: new Date(sleepEnd).toISOString(),
+            type: LogType.SLEEP,
+            durationMinutes: duration
+        };
+    } else {
+        const baseLog = {
+            id,
+            timestamp: new Date(date).toISOString(),
+        };
+
+        switch (activeType) {
+            case LogType.FEED:
+                newLog = { ...baseLog, type: LogType.FEED, amountMl: Number(amount), feedType } as any;
+                break;
+            case LogType.DIAPER:
+                newLog = { ...baseLog, type: LogType.DIAPER, status: diaperStatus } as any;
+                break;
+            case LogType.HEALTH:
+                newLog = { ...baseLog, type: LogType.HEALTH, weightKg: Number(weight), heightCm: Number(height), headCircumferenceCm: Number(headCirc) } as any;
+                break;
+            case LogType.OTHER:
+                newLog = { ...baseLog, type: LogType.OTHER, details: otherDetails } as any;
+                break;
+            default:
+                return;
+        }
     }
 
     onAddLog(newLog);
-    // Reset date to now for next entry
-    setDate(toLocalISO(new Date()));
-    setOtherDetails(""); // Reset other field
+    
+    // Reset fields
+    const now = new Date();
+    setDate(toLocalISO(now));
+    setSleepEnd(toLocalISO(now));
+    setSleepStart(toLocalISO(new Date(now.getTime() - 60 * 60 * 1000)));
+    setOtherDetails("");
   };
 
   const TabButton = ({ type, label }: { type: LogType, label: string }) => (
@@ -100,33 +134,36 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog }) => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <div className="flex justify-between items-end mb-2">
-            <label className="block text-sm font-medium text-gray-700 flex items-center gap-1">
-              <CalendarDays className="w-4 h-4 text-gray-400" />
-              記錄時間
-            </label>
-            <span className="text-xs text-blue-500">可點選時間補填舊記錄</span>
-          </div>
-          
-          {/* Quick Time Buttons */}
-          <div className="flex gap-2 mb-3 overflow-x-auto no-scrollbar">
-            <button type="button" onClick={() => setQuickTime(0)} className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-full border border-blue-100 whitespace-nowrap">現在</button>
-            <button type="button" onClick={() => setQuickTime(-15)} className="px-3 py-1 bg-gray-50 text-gray-600 text-xs font-bold rounded-full border border-gray-200 whitespace-nowrap">-15分</button>
-            <button type="button" onClick={() => setQuickTime(-30)} className="px-3 py-1 bg-gray-50 text-gray-600 text-xs font-bold rounded-full border border-gray-200 whitespace-nowrap">-30分</button>
-            <button type="button" onClick={() => setQuickTime(-60)} className="px-3 py-1 bg-gray-50 text-gray-600 text-xs font-bold rounded-full border border-gray-200 whitespace-nowrap">-1小時</button>
-          </div>
+        
+        {/* Generic Date Picker - Hide for Sleep */}
+        {activeType !== LogType.SLEEP && (
+            <div>
+            <div className="flex justify-between items-end mb-2">
+                <label className="block text-sm font-medium text-gray-700 flex items-center gap-1">
+                <CalendarDays className="w-4 h-4 text-gray-400" />
+                記錄時間
+                </label>
+            </div>
+            
+            {/* Quick Time Buttons */}
+            <div className="flex gap-2 mb-3 overflow-x-auto no-scrollbar">
+                <button type="button" onClick={() => setQuickTime(0)} className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-full border border-blue-100 whitespace-nowrap">現在</button>
+                <button type="button" onClick={() => setQuickTime(-15)} className="px-3 py-1 bg-gray-50 text-gray-600 text-xs font-bold rounded-full border border-gray-200 whitespace-nowrap">-15分</button>
+                <button type="button" onClick={() => setQuickTime(-30)} className="px-3 py-1 bg-gray-50 text-gray-600 text-xs font-bold rounded-full border border-gray-200 whitespace-nowrap">-30分</button>
+                <button type="button" onClick={() => setQuickTime(-60)} className="px-3 py-1 bg-gray-50 text-gray-600 text-xs font-bold rounded-full border border-gray-200 whitespace-nowrap">-1小時</button>
+            </div>
 
-          <div className="relative">
-            <input
-              type="datetime-local"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full p-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none font-medium text-gray-700"
-              required
-            />
-          </div>
-        </div>
+            <div className="relative">
+                <input
+                type="datetime-local"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full p-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none font-medium text-gray-700"
+                required
+                />
+            </div>
+            </div>
+        )}
 
         {activeType === LogType.FEED && (
           <>
@@ -177,14 +214,41 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog }) => {
         )}
 
         {activeType === LogType.SLEEP && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">時長 (分鐘)</label>
-            <input
-              type="number"
-              value={sleepDuration}
-              onChange={(e) => setSleepDuration(Number(e.target.value))}
-              className="w-full p-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none"
-            />
+          <div className="space-y-4">
+             <div className="grid grid-cols-1 gap-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                        <Moon className="w-4 h-4 text-indigo-400" /> 入睡時間
+                    </label>
+                    <input
+                        type="datetime-local"
+                        value={sleepStart}
+                        onChange={(e) => setSleepStart(e.target.value)}
+                        className="w-full p-3 rounded-xl bg-indigo-50 border border-indigo-200 focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
+                </div>
+                <div className="flex justify-center -my-2">
+                    <ArrowRight className="w-5 h-5 text-indigo-300 rotate-90" />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                        <Moon className="w-4 h-4 text-indigo-400" /> 醒來時間
+                    </label>
+                    <input
+                        type="datetime-local"
+                        value={sleepEnd}
+                        onChange={(e) => setSleepEnd(e.target.value)}
+                        className="w-full p-3 rounded-xl bg-indigo-50 border border-indigo-200 focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
+                </div>
+             </div>
+             
+             <div className="bg-indigo-50 p-3 rounded-lg flex justify-between items-center">
+                <span className="text-sm text-indigo-600 font-bold">總睡眠時長</span>
+                <span className="text-xl font-black text-indigo-700">
+                    {Math.floor(getSleepDuration() / 60)}小時 {getSleepDuration() % 60}分鐘
+                </span>
+             </div>
           </div>
         )}
 

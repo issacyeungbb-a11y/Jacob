@@ -29,9 +29,18 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog }) => {
       case LogType.DIAPER:
         return (log as DiaperLog).status;
       case LogType.SLEEP:
-        const hours = Math.floor((log as SleepLog).durationMinutes / 60);
-        const mins = (log as SleepLog).durationMinutes % 60;
-        return `${hours > 0 ? `${hours}小時 ` : ''}${mins}分鐘`;
+        // Calculate start time based on end time (timestamp) and duration
+        const durationMins = (log as SleepLog).durationMinutes;
+        const endTime = new Date(log.timestamp);
+        const startTime = new Date(endTime.getTime() - durationMins * 60000);
+        
+        const formatTime = (d: Date) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        const hours = Math.floor(durationMins / 60);
+        const mins = durationMins % 60;
+        const durationStr = `${hours > 0 ? `${hours}小時 ` : ''}${mins}分鐘`;
+        
+        return `${formatTime(startTime)} - ${formatTime(endTime)}\n(${durationStr})`;
       case LogType.HEALTH:
         const h = log as HealthLog;
         return [
@@ -59,7 +68,7 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog }) => {
                    {new Date(log.timestamp).toLocaleDateString()}
                  </span>
               </p>
-              <p className="text-gray-600 text-sm whitespace-pre-wrap">{getDetails(log)}</p>
+              <p className="text-gray-600 text-sm whitespace-pre-wrap leading-tight mt-1">{getDetails(log)}</p>
             </div>
           </div>
           <button 
