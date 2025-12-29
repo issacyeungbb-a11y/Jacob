@@ -2,9 +2,16 @@ import { GoogleGenAI } from "@google/genai";
 import { BabyLog, LogType } from "../types";
 import { BIRTH_DATE, BABY_NAME } from "../constants";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 export const generateBabyInsights = async (logs: BabyLog[]): Promise<string> => {
+  // Initialize AI client lazily to prevent top-level crashes if env var is missing during initial load
+  let ai;
+  try {
+    ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  } catch (e) {
+    console.error("Failed to initialize GoogleGenAI:", e);
+    return "系統設定錯誤：找不到 API Key，請檢查環境變數設定。";
+  }
+
   // Filter for last 7 days to keep context relevant and small
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -42,6 +49,6 @@ export const generateBabyInsights = async (logs: BabyLog[]): Promise<string> => 
     return response.text || "目前無法產生分析報告。";
   } catch (error) {
     console.error("Error generating insights:", error);
-    return "抱歉，目前無法產生分析。請檢查您的網路連線。";
+    return "抱歉，目前無法產生分析。請檢查您的網路連線或 API Key 設定。";
   }
 };
