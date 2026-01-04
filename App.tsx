@@ -7,6 +7,7 @@ import { Dashboard } from './components/Dashboard';
 import { LogForm } from './components/LogForm';
 import { LogList } from './components/LogList';
 import { TrendsChart } from './components/TrendsChart';
+import { HealthChart } from './components/HealthChart'; // Import new chart
 import { Sparkles, Download, Baby, CloudLightning, Settings, ExternalLink, Calendar, ChevronLeft, ChevronRight, Milk, Moon, Layers } from 'lucide-react';
 import { BABY_NAME, BIRTH_DATE } from './constants';
 
@@ -289,9 +290,14 @@ const App: React.FC = () => {
           <LogList logs={filteredLogs} onDeleteLog={handleDeleteLog} />
         </section>
 
-        {/* Trends Chart Section (NEW) */}
+        {/* Trends Chart Section (Existing) */}
         <section>
           <TrendsChart logs={logs} />
+        </section>
+        
+        {/* Health Chart Section (NEW) */}
+        <section>
+          <HealthChart logs={logs} />
         </section>
 
         {/* Settings / Tools */}

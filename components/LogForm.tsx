@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { LogType, FeedType, DiaperType, BabyLog } from '../types';
-import { PlusCircle, CalendarDays, Moon, ArrowRight, Play, Square, History } from 'lucide-react';
+import { PlusCircle, CalendarDays, Moon, ArrowRight, Play, Square, History, Weight, Ruler, Activity } from 'lucide-react';
 
 interface LogFormProps {
   onAddLog: (log: BabyLog) => void;
@@ -9,6 +9,8 @@ interface LogFormProps {
   onStartSleep: (startTime: string) => void;
   onEndSleep: (log: BabyLog) => void;
 }
+
+type HealthSubType = 'WEIGHT' | 'HEIGHT' | 'HEAD';
 
 export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepStartTime, onStartSleep, onEndSleep }) => {
   const [activeType, setActiveType] = useState<LogType>(LogType.FEED);
@@ -33,9 +35,10 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
   const [manualSleepStart, setManualSleepStart] = useState<string>(toLocalISO(new Date(Date.now() - 60 * 60 * 1000)));
   const [manualSleepEnd, setManualSleepEnd] = useState<string>(toLocalISO(new Date()));
 
-  const [weight, setWeight] = useState<number>(3.5);
-  const [height, setHeight] = useState<number>(50);
-  const [headCirc, setHeadCirc] = useState<number>(35);
+  // Health specific states
+  const [healthSubType, setHealthSubType] = useState<HealthSubType>('WEIGHT');
+  const [healthValue, setHealthValue] = useState<string>("");
+
   const [otherDetails, setOtherDetails] = useState<string>("");
   
   const [date, setDate] = useState<string>(toLocalISO(new Date()));
@@ -127,7 +130,18 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
                 newLog = { ...baseLog, type: LogType.DIAPER, status: diaperStatus } as any;
                 break;
             case LogType.HEALTH:
-                newLog = { ...baseLog, type: LogType.HEALTH, weightKg: Number(weight), heightCm: Number(height), headCircumferenceCm: Number(headCirc) } as any;
+                const val = Number(healthValue);
+                if (!val || val <= 0) {
+                    alert("請輸入有效的數值");
+                    return;
+                }
+                newLog = { 
+                    ...baseLog, 
+                    type: LogType.HEALTH, 
+                    weightKg: healthSubType === 'WEIGHT' ? val : undefined,
+                    heightCm: healthSubType === 'HEIGHT' ? val : undefined,
+                    headCircumferenceCm: healthSubType === 'HEAD' ? val : undefined,
+                } as any;
                 break;
             case LogType.OTHER:
                 newLog = { ...baseLog, type: LogType.OTHER, details: otherDetails } as any;
@@ -143,6 +157,7 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
     const now = new Date();
     setDate(toLocalISO(now));
     setOtherDetails("");
+    setHealthValue(""); 
   };
 
   const TabButton = ({ type, label }: { type: LogType, label: string }) => (
@@ -353,37 +368,48 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
             )}
 
             {activeType === LogType.HEALTH && (
-            <div className="grid grid-cols-3 gap-4">
-                <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">體重 (kg)</label>
+            <div>
+              <div className="flex gap-2 mb-4">
+                <button
+                   type="button"
+                   onClick={() => setHealthSubType('WEIGHT')}
+                   className={`flex-1 py-3 rounded-xl flex flex-col items-center justify-center gap-1 transition-all ${healthSubType === 'WEIGHT' ? 'bg-emerald-100 text-emerald-700 border-2 border-emerald-500 shadow-sm' : 'bg-gray-50 border border-gray-200 text-gray-500'}`}
+                >
+                   <Weight className="w-5 h-5" />
+                   <span className="text-xs font-bold">體重</span>
+                </button>
+                <button
+                   type="button"
+                   onClick={() => setHealthSubType('HEIGHT')}
+                   className={`flex-1 py-3 rounded-xl flex flex-col items-center justify-center gap-1 transition-all ${healthSubType === 'HEIGHT' ? 'bg-emerald-100 text-emerald-700 border-2 border-emerald-500 shadow-sm' : 'bg-gray-50 border border-gray-200 text-gray-500'}`}
+                >
+                   <Ruler className="w-5 h-5" />
+                   <span className="text-xs font-bold">身高</span>
+                </button>
+                <button
+                   type="button"
+                   onClick={() => setHealthSubType('HEAD')}
+                   className={`flex-1 py-3 rounded-xl flex flex-col items-center justify-center gap-1 transition-all ${healthSubType === 'HEAD' ? 'bg-emerald-100 text-emerald-700 border-2 border-emerald-500 shadow-sm' : 'bg-gray-50 border border-gray-200 text-gray-500'}`}
+                >
+                   <Activity className="w-5 h-5" />
+                   <span className="text-xs font-bold">頭圍</span>
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                   {healthSubType === 'WEIGHT' ? '重量 (kg)' : '長度 (cm)'}
+                </label>
                 <input
                     type="number"
                     step="0.01"
-                    value={weight}
-                    onChange={(e) => setWeight(Number(e.target.value))}
-                    className="w-full p-2 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none"
+                    value={healthValue}
+                    onChange={(e) => setHealthValue(e.target.value)}
+                    placeholder={healthSubType === 'WEIGHT' ? '3.5' : '50.0'}
+                    className="w-full p-4 text-xl font-bold text-center rounded-xl bg-emerald-50 border border-emerald-200 focus:ring-2 focus:ring-emerald-500 outline-none text-emerald-800"
+                    autoFocus
                 />
-                </div>
-                <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">身高 (cm)</label>
-                <input
-                    type="number"
-                    step="0.1"
-                    value={height}
-                    onChange={(e) => setHeight(Number(e.target.value))}
-                    className="w-full p-2 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none"
-                />
-                </div>
-                <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">頭圍 (cm)</label>
-                <input
-                    type="number"
-                    step="0.1"
-                    value={headCirc}
-                    onChange={(e) => setHeadCirc(Number(e.target.value))}
-                    className="w-full p-2 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none"
-                />
-                </div>
+              </div>
             </div>
             )}
 
