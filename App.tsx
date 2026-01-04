@@ -149,6 +149,38 @@ const App: React.FC = () => {
 
     return { totalMilk, totalSleepMinutes, diaperCount };
   }, [filteredLogs]);
+  
+  // Find the absolute last feed time (across all logs, not just filtered)
+  const lastFeedTime = useMemo(() => {
+      const lastFeed = logs.find(l => l.type === LogType.FEED);
+      return lastFeed ? lastFeed.timestamp : null;
+  }, [logs]);
+
+  // Pre-calculate intervals between feeds for all logs
+  // Returns a map: { [logId]: "3小時 15分" }
+  const feedIntervals = useMemo(() => {
+    const map: Record<string, string> = {};
+    // Sort all logs chronologically (oldest first) to calculate intervals
+    const sortedAsc = [...logs].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    let previousFeedTime = 0;
+    
+    sortedAsc.forEach(log => {
+        if (log.type === LogType.FEED) {
+            const currentFeedTime = new Date(log.timestamp).getTime();
+            if (previousFeedTime > 0) {
+                const diffMs = currentFeedTime - previousFeedTime;
+                // Only if positive
+                if (diffMs > 0) {
+                    const hrs = Math.floor(diffMs / (1000 * 60 * 60));
+                    const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                    map[log.id] = `${hrs}小時 ${mins}分`;
+                }
+            }
+            previousFeedTime = currentFeedTime;
+        }
+    });
+    return map;
+  }, [logs]);
 
   // Calculate Age
   const birth = new Date(BIRTH_DATE);
@@ -202,6 +234,7 @@ const App: React.FC = () => {
             sleepStartTime={sleepStartTime}
             onStartSleep={handleSleepStart}
             onEndSleep={handleSleepEnd}
+            lastFeedTime={lastFeedTime}
           />
         </section>
 
@@ -287,7 +320,7 @@ const App: React.FC = () => {
              </div>
           </div>
 
-          <LogList logs={filteredLogs} onDeleteLog={handleDeleteLog} />
+          <LogList logs={filteredLogs} onDeleteLog={handleDeleteLog} feedIntervals={feedIntervals} />
         </section>
 
         {/* Trends Chart Section (Existing) */}

@@ -1,13 +1,14 @@
 import React from 'react';
 import { BabyLog, LogType, FeedLog, DiaperLog, SleepLog, HealthLog, OtherLog } from '../types';
-import { Milk, Baby, Moon, Activity, Trash2, StickyNote } from 'lucide-react';
+import { Milk, Baby, Moon, Activity, Trash2, StickyNote, Sunrise, Sun, Sunset, MoonStar, Clock } from 'lucide-react';
 
 interface LogListProps {
   logs: BabyLog[];
   onDeleteLog: (id: string) => void;
+  feedIntervals?: Record<string, string>;
 }
 
-export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog }) => {
+export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog, feedIntervals }) => {
   // Sort by date desc
   const sortedLogs = [...logs].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
@@ -19,6 +20,51 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog }) => {
       case LogType.HEALTH: return <Activity className="w-5 h-5 text-emerald-500" />;
       case LogType.OTHER: return <StickyNote className="w-5 h-5 text-pink-500" />;
     }
+  };
+
+  // Helper to determine time period styling
+  const getTimePeriodStyle = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const hour = date.getHours();
+
+    // 00:00 - 05:59: 凌晨 (Late Night)
+    if (hour < 6) {
+      return {
+        label: '凌晨',
+        icon: <MoonStar className="w-3 h-3" />,
+        bgColor: 'bg-indigo-50',
+        textColor: 'text-indigo-400',
+        borderColor: 'border-indigo-300'
+      };
+    }
+    // 06:00 - 11:59: 早上 (Morning)
+    if (hour < 12) {
+      return {
+        label: '早上',
+        icon: <Sunrise className="w-3 h-3" />,
+        bgColor: 'bg-amber-50',
+        textColor: 'text-amber-500',
+        borderColor: 'border-amber-300'
+      };
+    }
+    // 12:00 - 17:59: 下午 (Afternoon)
+    if (hour < 18) {
+      return {
+        label: '下午',
+        icon: <Sun className="w-3 h-3" />,
+        bgColor: 'bg-sky-50',
+        textColor: 'text-sky-500',
+        borderColor: 'border-sky-300'
+      };
+    }
+    // 18:00 - 23:59: 晚上 (Evening)
+    return {
+      label: '晚上',
+      icon: <Sunset className="w-3 h-3" />,
+      bgColor: 'bg-slate-50',
+      textColor: 'text-slate-500',
+      borderColor: 'border-slate-300'
+    };
   };
 
   const getDetails = (log: BabyLog) => {
@@ -45,7 +91,8 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog }) => {
         const h = log as HealthLog;
         return [
            h.weightKg ? `${h.weightKg}kg` : '',
-           h.heightCm ? `${h.heightCm}cm` : ''
+           h.heightCm ? `${h.heightCm}cm` : '',
+           h.headCircumferenceCm ? `頭圍 ${h.headCircumferenceCm}cm` : ''
         ].filter(Boolean).join(', ');
       case LogType.OTHER:
         return (log as OtherLog).details;
@@ -55,30 +102,62 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog }) => {
 
   return (
     <div className="space-y-3">
-      {sortedLogs.map((log) => (
-        <div key={log.id} className="bg-white p-4 rounded-xl shadow-sm flex items-center justify-between animate-fade-in">
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-full bg-gray-50`}>
-              {getIcon(log.type)}
-            </div>
-            <div>
-              <p className="font-bold text-gray-800 text-sm">
-                {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                 <span className="text-gray-400 font-normal text-xs ml-2">
-                   {new Date(log.timestamp).toLocaleDateString()}
-                 </span>
-              </p>
-              <p className="text-gray-600 text-sm whitespace-pre-wrap leading-tight mt-1">{getDetails(log)}</p>
+      {sortedLogs.map((log) => {
+        const timeStyle = getTimePeriodStyle(log.timestamp);
+        const feedInterval = (log.type === LogType.FEED && feedIntervals) ? feedIntervals[log.id] : null;
+        
+        return (
+          <div 
+            key={log.id} 
+            className={`bg-white rounded-xl shadow-sm flex items-center justify-between animate-fade-in overflow-hidden border-l-[6px] ${timeStyle.borderColor}`}
+          >
+            <div className="flex items-center gap-3 p-4 w-full">
+              {/* Icon Circle */}
+              <div className={`p-2.5 rounded-full ${timeStyle.bgColor} flex-shrink-0`}>
+                {getIcon(log.type)}
+              </div>
+
+              <div className="flex-grow min-w-0">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                   {/* Time Badge */}
+                   <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-1 ${timeStyle.bgColor} ${timeStyle.textColor}`}>
+                      {timeStyle.icon}
+                      {timeStyle.label}
+                   </span>
+                   {/* Actual Time */}
+                   <span className="font-bold text-gray-800 text-sm">
+                     {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                   </span>
+                   
+                   {/* Feed Interval Display */}
+                   {feedInterval && (
+                       <span className="flex items-center gap-1 text-[10px] text-gray-500 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded-md whitespace-nowrap">
+                         <Clock className="w-3 h-3 text-gray-400" />
+                         相隔 {feedInterval}
+                       </span>
+                   )}
+                </div>
+                
+                <p className="text-gray-600 text-sm whitespace-pre-wrap leading-tight truncate">
+                    {getDetails(log)}
+                </p>
+              </div>
+
+              {/* Delete Button */}
+              <button 
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteLog(log.id);
+                }}
+                className="p-2 text-gray-300 hover:text-red-400 transition-colors flex-shrink-0"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
             </div>
           </div>
-          <button 
-            onClick={() => onDeleteLog(log.id)}
-            className="p-2 text-gray-300 hover:text-red-400 transition-colors"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      ))}
+        );
+      })}
+      
       {sortedLogs.length === 0 && (
         <div className="text-center text-gray-400 py-8 bg-white rounded-xl border border-dashed border-gray-200">
           <p className="text-sm">這一天沒有記錄。</p>

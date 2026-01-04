@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { LogType, FeedType, DiaperType, BabyLog } from '../types';
-import { PlusCircle, CalendarDays, Moon, ArrowRight, Play, Square, History, Weight, Ruler, Activity } from 'lucide-react';
+import { PlusCircle, CalendarDays, Moon, ArrowRight, Play, Square, History, Weight, Ruler, Activity, Clock } from 'lucide-react';
 
 interface LogFormProps {
   onAddLog: (log: BabyLog) => void;
@@ -8,11 +8,12 @@ interface LogFormProps {
   sleepStartTime: string | null;
   onStartSleep: (startTime: string) => void;
   onEndSleep: (log: BabyLog) => void;
+  lastFeedTime?: string | null; // New prop to receive last feed timestamp
 }
 
 type HealthSubType = 'WEIGHT' | 'HEIGHT' | 'HEAD';
 
-export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepStartTime, onStartSleep, onEndSleep }) => {
+export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepStartTime, onStartSleep, onEndSleep, lastFeedTime }) => {
   const [activeType, setActiveType] = useState<LogType>(LogType.FEED);
   const [mode, setMode] = useState<'LIVE' | 'MANUAL'>('LIVE'); // For Sleep Tab
   
@@ -42,6 +43,23 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
   const [otherDetails, setOtherDetails] = useState<string>("");
   
   const [date, setDate] = useState<string>(toLocalISO(new Date()));
+
+  // Calculate time since last feed dynamically based on the selected 'date'
+  const timeSinceLastFeed = useMemo(() => {
+    if (activeType !== LogType.FEED || !lastFeedTime || !date) return null;
+
+    const currentSelectedTime = new Date(date).getTime();
+    const lastFeedTimestamp = new Date(lastFeedTime).getTime();
+    const diffMs = currentSelectedTime - lastFeedTimestamp;
+
+    // Only show if current time is AFTER last feed
+    if (diffMs <= 0) return null;
+
+    const hrs = Math.floor(diffMs / (1000 * 60 * 60));
+    const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+    return `${hrs}小時 ${mins}分`;
+  }, [date, lastFeedTime, activeType]);
 
   // Sync End Sleep Input with current time when component mounts or updates
   useEffect(() => {
@@ -298,6 +316,16 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
                     <CalendarDays className="w-4 h-4 text-gray-400" />
                     記錄時間
                     </label>
+                    
+                    {/* Time since last feed hint */}
+                    {activeType === LogType.FEED && timeSinceLastFeed && (
+                       <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-100 rounded-md animate-fade-in">
+                          <Clock className="w-3 h-3 text-blue-400" />
+                          <span className="text-[10px] text-blue-500 font-bold">
+                             距離上次: {timeSinceLastFeed}
+                          </span>
+                       </div>
+                    )}
                 </div>
                 
                 {/* Quick Time Buttons */}
