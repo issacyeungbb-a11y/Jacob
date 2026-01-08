@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { LogType, FeedType, DiaperType, BabyLog } from '../types';
+import { LogType, FeedType, DiaperType, BabyLog, HealthLog } from '../types';
 import { PlusCircle, CalendarDays, Moon, ArrowRight, Play, Square, History, Weight, Ruler, Activity, Clock } from 'lucide-react';
 
 interface LogFormProps {
@@ -8,60 +9,43 @@ interface LogFormProps {
   sleepStartTime: string | null;
   onStartSleep: (startTime: string) => void;
   onEndSleep: (log: BabyLog) => void;
-  lastFeedTime?: string | null; // New prop to receive last feed timestamp
+  lastFeedTime?: string | null;
 }
 
 type HealthSubType = 'WEIGHT' | 'HEIGHT' | 'HEAD';
 
 export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepStartTime, onStartSleep, onEndSleep, lastFeedTime }) => {
   const [activeType, setActiveType] = useState<LogType>(LogType.FEED);
-  const [mode, setMode] = useState<'LIVE' | 'MANUAL'>('LIVE'); // For Sleep Tab
+  const [mode, setMode] = useState<'LIVE' | 'MANUAL'>('LIVE');
   
-  // Time helper
   const toLocalISO = (date: Date) => {
     const offset = date.getTimezoneOffset() * 60000;
     return new Date(date.getTime() - offset).toISOString().slice(0, 16);
   };
 
-  // Form States
   const [amount, setAmount] = useState<number>(120);
   const [feedType, setFeedType] = useState<FeedType>(FeedType.FORMULA);
   const [diaperStatus, setDiaperStatus] = useState<DiaperType>(DiaperType.WET);
-  
-  // Sleep specific states
-  const [startSleepInput, setStartSleepInput] = useState<string>(toLocalISO(new Date())); // For LIVE start
-  const [endSleepInput, setEndSleepInput] = useState<string>(toLocalISO(new Date())); // For LIVE end
-  
-  // Manual sleep states
+  const [startSleepInput, setStartSleepInput] = useState<string>(toLocalISO(new Date()));
+  const [endSleepInput, setEndSleepInput] = useState<string>(toLocalISO(new Date()));
   const [manualSleepStart, setManualSleepStart] = useState<string>(toLocalISO(new Date(Date.now() - 60 * 60 * 1000)));
   const [manualSleepEnd, setManualSleepEnd] = useState<string>(toLocalISO(new Date()));
-
-  // Health specific states
   const [healthSubType, setHealthSubType] = useState<HealthSubType>('WEIGHT');
   const [healthValue, setHealthValue] = useState<string>("");
-
   const [otherDetails, setOtherDetails] = useState<string>("");
-  
   const [date, setDate] = useState<string>(toLocalISO(new Date()));
 
-  // Calculate time since last feed dynamically based on the selected 'date'
   const timeSinceLastFeed = useMemo(() => {
     if (activeType !== LogType.FEED || !lastFeedTime || !date) return null;
-
     const currentSelectedTime = new Date(date).getTime();
     const lastFeedTimestamp = new Date(lastFeedTime).getTime();
     const diffMs = currentSelectedTime - lastFeedTimestamp;
-
-    // Only show if current time is AFTER last feed
     if (diffMs <= 0) return null;
-
     const hrs = Math.floor(diffMs / (1000 * 60 * 60));
     const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-
     return `${hrs}小時 ${mins}分`;
   }, [date, lastFeedTime, activeType]);
 
-  // Sync End Sleep Input with current time when component mounts or updates
   useEffect(() => {
     const timer = setInterval(() => {
         if (isSleeping) {
@@ -73,60 +57,48 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
     return () => clearInterval(timer);
   }, [isSleeping]);
 
-  // Quick Time Adjustments (Only for non-sleep logs)
   const setQuickTime = (minutesOffset: number) => {
     const now = new Date();
     now.setMinutes(now.getMinutes() + minutesOffset);
     setDate(toLocalISO(now));
   };
   
-  // Handle Live Sleep Actions
   const handleStartSleeping = () => {
-    // Save start time to DB status
     const start = new Date(startSleepInput).toISOString();
     onStartSleep(start);
   };
 
   const handleWakeUp = () => {
     if (!sleepStartTime) return;
-    
     const start = new Date(sleepStartTime).getTime();
     const end = new Date(endSleepInput).getTime();
     const duration = Math.floor((end - start) / (1000 * 60));
-
     if (duration <= 0) {
         alert("起床時間必須晚於入睡時間");
         return;
     }
-
     const newLog: BabyLog = {
         id: Date.now().toString(),
-        timestamp: new Date(endSleepInput).toISOString(), // Log timestamp is usually the end time
+        timestamp: new Date(endSleepInput).toISOString(),
         type: LogType.SLEEP,
         durationMinutes: duration
     };
-
     onEndSleep(newLog);
   };
 
-  // Handle Manual Form Submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
     let newLog: BabyLog;
     const id = Date.now().toString();
 
-    // Manual Sleep Entry
     if (activeType === LogType.SLEEP && mode === 'MANUAL') {
         const start = new Date(manualSleepStart).getTime();
         const end = new Date(manualSleepEnd).getTime();
         const duration = Math.floor((end - start) / (1000 * 60));
-        
         if (duration <= 0) {
             alert("結束時間必須晚於開始時間");
             return;
         }
-
         newLog = {
             id,
             timestamp: new Date(manualSleepEnd).toISOString(),
@@ -134,7 +106,6 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
             durationMinutes: duration
         };
     } else {
-        // Standard Logs
         const baseLog = {
             id,
             timestamp: new Date(date).toISOString(),
@@ -148,18 +119,20 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
                 newLog = { ...baseLog, type: LogType.DIAPER, status: diaperStatus } as any;
                 break;
             case LogType.HEALTH:
-                const val = Number(healthValue);
-                if (!val || val <= 0) {
+                const val = parseFloat(healthValue);
+                if (isNaN(val) || val <= 0) {
                     alert("請輸入有效的數值");
                     return;
                 }
-                newLog = { 
+                // 重要：動態建立物件，避免包含 undefined 導致 Firebase 報錯
+                const hLog: any = { 
                     ...baseLog, 
-                    type: LogType.HEALTH, 
-                    weightKg: healthSubType === 'WEIGHT' ? val : undefined,
-                    heightCm: healthSubType === 'HEIGHT' ? val : undefined,
-                    headCircumferenceCm: healthSubType === 'HEAD' ? val : undefined,
-                } as any;
+                    type: LogType.HEALTH 
+                };
+                if (healthSubType === 'WEIGHT') hLog.weightKg = val;
+                else if (healthSubType === 'HEIGHT') hLog.heightCm = val;
+                else if (healthSubType === 'HEAD') hLog.headCircumferenceCm = val;
+                newLog = hLog as HealthLog;
                 break;
             case LogType.OTHER:
                 newLog = { ...baseLog, type: LogType.OTHER, details: otherDetails } as any;
@@ -171,11 +144,11 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
 
     onAddLog(newLog);
     
-    // Reset fields
+    // 重設欄位
+    setHealthValue("");
+    setOtherDetails("");
     const now = new Date();
     setDate(toLocalISO(now));
-    setOtherDetails("");
-    setHealthValue(""); 
   };
 
   const TabButton = ({ type, label }: { type: LogType, label: string }) => (
@@ -207,7 +180,6 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
         <TabButton type={LogType.OTHER} label="其他" />
       </div>
 
-      {/* SLEEP TAB SPECIAL HANDLING */}
       {activeType === LogType.SLEEP ? (
           <div>
              <div className="flex bg-gray-100 p-1 rounded-xl mb-4">
@@ -306,10 +278,7 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
              )}
           </div>
       ) : (
-          /* STANDARD FORM FOR OTHER TYPES */
           <form onSubmit={handleSubmit} className="space-y-4">
-            
-            {/* Generic Date Picker */}
             <div>
                 <div className="flex justify-between items-end mb-2">
                     <label className="block text-sm font-medium text-gray-700 flex items-center gap-1">
@@ -317,7 +286,6 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
                     記錄時間
                     </label>
                     
-                    {/* Time since last feed hint */}
                     {activeType === LogType.FEED && timeSinceLastFeed && (
                        <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-100 rounded-md animate-fade-in">
                           <Clock className="w-3 h-3 text-blue-400" />
@@ -328,7 +296,6 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
                     )}
                 </div>
                 
-                {/* Quick Time Buttons */}
                 <div className="flex gap-2 mb-3 overflow-x-auto no-scrollbar">
                     <button type="button" onClick={() => setQuickTime(0)} className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-full border border-blue-100 whitespace-nowrap">現在</button>
                     <button type="button" onClick={() => setQuickTime(-15)} className="px-3 py-1 bg-gray-50 text-gray-600 text-xs font-bold rounded-full border border-gray-200 whitespace-nowrap">-15分</button>

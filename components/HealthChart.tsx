@@ -1,6 +1,7 @@
+
 import React, { useMemo, useState } from 'react';
 import { BabyLog, LogType, HealthLog } from '../types';
-import { Activity, Weight, Ruler } from 'lucide-react';
+import { Activity, Weight, Ruler, Info } from 'lucide-react';
 
 interface HealthChartProps {
   logs: BabyLog[];
@@ -11,12 +12,8 @@ type HealthMetric = 'WEIGHT' | 'HEIGHT' | 'HEAD';
 export const HealthChart: React.FC<HealthChartProps> = ({ logs }) => {
   const [metric, setMetric] = useState<HealthMetric>('WEIGHT');
 
-  // Filter and prepare data
   const data = useMemo(() => {
-    // 1. Filter only health logs
     const healthLogs = logs.filter(l => l.type === LogType.HEALTH) as HealthLog[];
-    
-    // 2. Extract relevant metric and sort by date ascending
     const points = healthLogs
       .map(l => {
         let value = 0;
@@ -30,43 +27,51 @@ export const HealthChart: React.FC<HealthChartProps> = ({ logs }) => {
             id: l.id
         };
       })
-      .filter(p => p.value > 0) // Remove entries without the selected metric
-      .sort((a, b) => a.date.getTime() - b.date.getTime()); // Sort Chronologically
+      .filter(p => p.value > 0)
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
 
     return points;
   }, [logs, metric]);
 
-  // Chart Dimensions
   const height = 200;
   const padding = 20;
 
-  // Render Logic
   const renderChart = () => {
-    if (data.length < 2) {
+    if (data.length === 0) {
         return (
-            <div className="h-[200px] flex items-center justify-center text-gray-400 text-sm bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                需要至少兩筆{getLabel()}記錄來顯示趨勢
+            <div className="h-[200px] flex flex-col items-center justify-center text-gray-400 text-sm bg-gray-50 rounded-xl border border-dashed border-gray-200 p-4 text-center">
+                <Info className="w-8 h-8 mb-2 opacity-20" />
+                <p>尚無{getLabel()}數據</p>
+                <p className="text-[10px]">請在「新增記錄 > 健康」中輸入</p>
             </div>
         );
     }
 
-    const minVal = Math.min(...data.map(d => d.value)) * 0.95; // 5% buffer bottom
-    const maxVal = Math.max(...data.map(d => d.value)) * 1.05; // 5% buffer top
-    const range = maxVal - minVal;
+    if (data.length === 1) {
+        return (
+            <div className="h-[200px] flex flex-col items-center justify-center bg-emerald-50 rounded-xl border border-emerald-100 p-6 text-center">
+                <div className="bg-white p-4 rounded-full shadow-sm mb-4">
+                    {metric === 'WEIGHT' ? <Weight className="w-8 h-8 text-emerald-500" /> : <Ruler className="w-8 h-8 text-emerald-500" />}
+                </div>
+                <p className="text-gray-500 text-xs mb-1">第一筆紀錄已儲存</p>
+                <p className="text-3xl font-black text-emerald-700">{data[0].value} <span className="text-sm font-normal">{metric === 'WEIGHT' ? 'kg' : 'cm'}</span></p>
+                <p className="text-[10px] text-emerald-400 mt-2">再輸入一筆即可顯示趨勢曲線</p>
+            </div>
+        );
+    }
 
-    // Helper to scale Y
+    const minVal = Math.min(...data.map(d => d.value)) * 0.98;
+    const maxVal = Math.max(...data.map(d => d.value)) * 1.02;
+    const range = Math.max(maxVal - minVal, 0.1);
+
     const getY = (val: number) => {
         return height - ((val - minVal) / range) * (height - padding * 2) - padding;
     };
 
-    // Helper to scale X
-    // We space points equally to make it readable, rather than strictly by time, 
-    // but show dates on X axis.
     const getX = (index: number) => {
         return (index / (data.length - 1)) * 100;
     };
 
-    // Build SVG Path
     const pathD = data.map((d, i) => {
         const x = getX(i);
         const y = getY(d.value);
@@ -75,23 +80,12 @@ export const HealthChart: React.FC<HealthChartProps> = ({ logs }) => {
 
     return (
         <div className="relative h-[220px] w-full mt-4 select-none">
-            {/* Y Axis Labels (Min/Max) */}
             <div className="absolute left-0 top-0 bottom-6 w-full pointer-events-none opacity-20">
                 <div className="border-t border-emerald-500 w-full absolute" style={{ top: padding }}></div>
                 <div className="border-t border-emerald-500 w-full absolute" style={{ bottom: padding }}></div>
             </div>
 
             <svg className="w-full h-[200px] overflow-visible">
-                {/* Gradient Definition */}
-                <defs>
-                    <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#10b981" stopOpacity="0.2"/>
-                        <stop offset="100%" stopColor="#10b981" stopOpacity="0"/>
-                    </linearGradient>
-                </defs>
-
-                {/* Area under curve (Optional, requires closing path) */}
-                {/* Line */}
                 <path 
                     d={pathD} 
                     fill="none" 
@@ -102,36 +96,16 @@ export const HealthChart: React.FC<HealthChartProps> = ({ logs }) => {
                     className="drop-shadow-sm"
                 />
 
-                {/* Dots & Labels */}
                 {data.map((d, i) => {
                     const y = getY(d.value);
                     const xPct = getX(i);
-                    
                     return (
                         <g key={d.id}>
-                            {/* Dot */}
                             <circle cx={`${xPct}%`} cy={y} r="4" fill="white" stroke="#10b981" strokeWidth="2" />
-                            
-                            {/* Value Label */}
-                            <text 
-                                x={`${xPct}%`} 
-                                y={y - 12} 
-                                textAnchor="middle" 
-                                fill="#047857" 
-                                fontSize="11" 
-                                fontWeight="bold"
-                            >
+                            <text x={`${xPct}%`} y={y - 12} textAnchor="middle" fill="#047857" fontSize="11" fontWeight="bold">
                                 {d.value}
                             </text>
-
-                            {/* Date Label (Bottom) */}
-                            <text 
-                                x={`${xPct}%`} 
-                                y={215} 
-                                textAnchor="middle" 
-                                fill="#9ca3af" 
-                                fontSize="10"
-                            >
+                            <text x={`${xPct}%`} y={215} textAnchor="middle" fill="#9ca3af" fontSize="10">
                                 {d.date.toLocaleDateString('zh-TW', {month:'numeric', day:'numeric'})}
                             </text>
                         </g>
@@ -181,8 +155,8 @@ export const HealthChart: React.FC<HealthChartProps> = ({ logs }) => {
        {renderChart()}
        
        {data.length > 0 && (
-           <div className="mt-4 text-center">
-              <p className="text-xs text-gray-400">
+           <div className="mt-4 text-center bg-emerald-50 py-2 rounded-xl">
+              <p className="text-xs text-gray-500">
                  最新{getLabel()}: <span className="font-bold text-emerald-600 text-sm">{data[data.length-1].value} {metric === 'WEIGHT' ? 'kg' : 'cm'}</span>
               </p>
            </div>
