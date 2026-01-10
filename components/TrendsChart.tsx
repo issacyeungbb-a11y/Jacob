@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { BabyLog, LogType, FeedLog, SleepLog } from '../types';
 import { BarChart3, Milk, Moon, Layers, CalendarDays } from 'lucide-react';
@@ -27,8 +28,11 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
   const chartData = useMemo(() => {
     return chartDates.map(dateStr => {
       const dayLogs = logs.filter(l => {
-         // Convert log timestamp to local date string for comparison
+         if (!l.timestamp) return false;
          const logDate = new Date(l.timestamp);
+         if (isNaN(logDate.getTime())) return false;
+
+         // Convert log timestamp to local date string for comparison
          const offset = logDate.getTimezoneOffset() * 60000;
          const localLogDate = new Date(logDate.getTime() - offset).toISOString().split('T')[0];
          return localLogDate === dateStr;

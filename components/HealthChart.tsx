@@ -27,7 +27,7 @@ export const HealthChart: React.FC<HealthChartProps> = ({ logs }) => {
             id: l.id
         };
       })
-      .filter(p => p.value > 0)
+      .filter(p => p.value > 0 && !isNaN(p.date.getTime()))
       .sort((a, b) => a.date.getTime() - b.date.getTime());
 
     return points;

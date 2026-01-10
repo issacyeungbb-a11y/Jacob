@@ -19,9 +19,6 @@ import {
   Calendar, 
   ChevronLeft, 
   ChevronRight, 
-  Milk, 
-  Moon, 
-  Layers,
   LayoutDashboard,
   History,
   BarChart2,
@@ -30,7 +27,7 @@ import {
   Loader2,
   WifiOff
 } from 'lucide-react';
-import { BABY_NAME, BIRTH_DATE } from './constants';
+import { BABY_NAME } from './constants';
 
 type AppView = 'HOME' | 'HISTORY' | 'TRENDS' | 'AI';
 
@@ -87,7 +84,9 @@ const App: React.FC = () => {
 
     const unsubscribeLogs = subscribeToLogs(
         (updatedLogs) => {
-            setLogs(updatedLogs);
+            // Filter out corrupt data immediately
+            const validLogs = updatedLogs.filter(l => l.timestamp && !isNaN(new Date(l.timestamp).getTime()));
+            setLogs(validLogs);
             setIsLoading(false);
             setError(null);
         },
@@ -112,10 +111,14 @@ const App: React.FC = () => {
 
   const filteredLogs = useMemo(() => {
     return logs.filter(l => {
-      const logDate = new Date(l.timestamp);
-      const offset = logDate.getTimezoneOffset() * 60000;
-      const localLogDate = new Date(logDate.getTime() - offset).toISOString().split('T')[0];
-      return localLogDate === selectedDate;
+      try {
+        const logDate = new Date(l.timestamp);
+        const offset = logDate.getTimezoneOffset() * 60000;
+        const localLogDate = new Date(logDate.getTime() - offset).toISOString().split('T')[0];
+        return localLogDate === selectedDate;
+      } catch (e) {
+        return false;
+      }
     });
   }, [logs, selectedDate]);
 
