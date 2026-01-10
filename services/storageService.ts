@@ -1,14 +1,5 @@
 
 import { db } from './firebase';
-import { 
-  collection, 
-  setDoc, 
-  deleteDoc, 
-  doc, 
-  onSnapshot, 
-  query, 
-  orderBy 
-} from "firebase/firestore";
 import { BabyLog } from '../types';
 
 const COLLECTION_NAME = 'jacob_logs';
@@ -17,41 +8,42 @@ const STATUS_DOC_ID = 'status_sleep'; // Special document to track active sleep
 // 監聽資料庫變更 (即時同步)
 export const subscribeToLogs = (onUpdate: (logs: BabyLog[]) => void, onError?: (error: any) => void) => {
   // Filter out the status document from the main log list
-  const q = query(collection(db, COLLECTION_NAME), orderBy("timestamp", "desc"));
-  
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    const logs: BabyLog[] = [];
-    snapshot.forEach((doc) => {
-      // Skip special status documents
-      if (doc.id !== STATUS_DOC_ID) {
-        logs.push(doc.data() as BabyLog);
-      }
+  const unsubscribe = db.collection(COLLECTION_NAME)
+    .orderBy("timestamp", "desc")
+    .onSnapshot((snapshot) => {
+      const logs: BabyLog[] = [];
+      snapshot.forEach((doc) => {
+        // Skip special status documents
+        if (doc.id !== STATUS_DOC_ID) {
+          logs.push(doc.data() as BabyLog);
+        }
+      });
+      onUpdate(logs);
+    }, (error) => {
+      console.error("Firebase sync error:", error);
+      if (onError) onError(error);
     });
-    onUpdate(logs);
-  }, (error) => {
-    console.error("Firebase sync error:", error);
-    if (onError) onError(error);
-  });
 
   return unsubscribe;
 };
 
 // 監聽睡眠狀態
 export const subscribeToSleepStatus = (onUpdate: (startTime: string | null) => void) => {
-  const unsubscribe = onSnapshot(doc(db, COLLECTION_NAME, STATUS_DOC_ID), (doc) => {
-    if (doc.exists() && doc.data().startTime) {
-      onUpdate(doc.data().startTime);
-    } else {
-      onUpdate(null);
-    }
-  });
+  const unsubscribe = db.collection(COLLECTION_NAME).doc(STATUS_DOC_ID)
+    .onSnapshot((doc) => {
+      if (doc.exists && doc.data()?.startTime) {
+        onUpdate(doc.data().startTime);
+      } else {
+        onUpdate(null);
+      }
+    });
   return unsubscribe;
 };
 
 // 設定開始睡眠
 export const setSleepStatus = async (startTime: string) => {
   try {
-    await setDoc(doc(db, COLLECTION_NAME, STATUS_DOC_ID), { startTime });
+    await db.collection(COLLECTION_NAME).doc(STATUS_DOC_ID).set({ startTime });
   } catch (e) {
     console.error("Error setting sleep status:", e);
   }
@@ -60,7 +52,7 @@ export const setSleepStatus = async (startTime: string) => {
 // 清除睡眠狀態 (起床)
 export const clearSleepStatus = async () => {
   try {
-    await deleteDoc(doc(db, COLLECTION_NAME, STATUS_DOC_ID));
+    await db.collection(COLLECTION_NAME).doc(STATUS_DOC_ID).delete();
   } catch (e) {
     console.error("Error clearing sleep status:", e);
   }
@@ -70,7 +62,7 @@ export const clearSleepStatus = async () => {
 export const addLogToCloud = async (log: BabyLog) => {
   try {
     // 使用 log.id 作為文件的 ID，避免重複
-    await setDoc(doc(db, COLLECTION_NAME, log.id), log);
+    await db.collection(COLLECTION_NAME).doc(log.id).set(log);
   } catch (e) {
     console.error("Error adding document: ", e);
     alert("儲存失敗，請檢查網路連線");
@@ -80,7 +72,7 @@ export const addLogToCloud = async (log: BabyLog) => {
 // 刪除記錄 (雲端刪除)
 export const deleteLogFromCloud = async (id: string) => {
   try {
-    await deleteDoc(doc(db, COLLECTION_NAME, id));
+    await db.collection(COLLECTION_NAME).doc(id).delete();
   } catch (e) {
     console.error("Error removing document: ", e);
     alert("刪除失敗，請檢查網路連線");

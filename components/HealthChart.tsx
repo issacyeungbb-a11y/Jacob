@@ -42,7 +42,7 @@ export const HealthChart: React.FC<HealthChartProps> = ({ logs }) => {
             <div className="h-[200px] flex flex-col items-center justify-center text-gray-400 text-sm bg-gray-50 rounded-xl border border-dashed border-gray-200 p-4 text-center">
                 <Info className="w-8 h-8 mb-2 opacity-20" />
                 <p>尚無{getLabel()}數據</p>
-                <p className="text-[10px]">請在「新增記錄 > 健康」中輸入</p>
+                <p className="text-[10px]">請在「新增記錄 &gt; 健康」中輸入</p>
             </div>
         );
     }

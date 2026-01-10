@@ -1,5 +1,6 @@
-import * as firebase from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+
+import firebase from "firebase/compat/app";
+import "firebase/compat/firestore";
 
 // 已填入您的 Jacob 專案金鑰
 const firebaseConfig = {
@@ -16,6 +17,6 @@ const firebaseConfig = {
 // 由於您已經提供了正確的 projectId ("jacob-3ac2a")，這裡現在會回傳 true
 export const isConfigured = firebaseConfig.projectId !== "your-project-id";
 
-// Use type casting to bypass potential type definition mismatches in the environment
-const app = (firebase as any).initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+// Initialize Firebase with compat API
+const app = firebase.initializeApp(firebaseConfig);
+export const db = app.firestore();
