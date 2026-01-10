@@ -29,7 +29,8 @@ import {
   Image as ImageIcon,
   RefreshCw,
   Camera,
-  X
+  X,
+  Edit3
 } from 'lucide-react';
 import { BABY_NAME, BIRTH_DATE } from './constants';
 
@@ -84,13 +85,19 @@ const App: React.FC = () => {
   const [imgError, setImgError] = useState(false);
   const [imgTimestamp, setImgTimestamp] = useState(Date.now()); 
   const [customImage, setCustomImage] = useState<string | null>(null);
+  const [isProcessingImg, setIsProcessingImg] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Load custom image from local storage
-    const savedImage = localStorage.getItem('jacob_custom_photo');
-    if (savedImage) {
-      setCustomImage(savedImage);
+    try {
+        const savedImage = localStorage.getItem('jacob_custom_photo');
+        if (savedImage) {
+            setCustomImage(savedImage);
+        }
+    } catch (e) {
+        console.error("Failed to load image from storage", e);
+        localStorage.removeItem('jacob_custom_photo');
     }
 
     // 設置超時檢查，若 Firebase 太久沒反應則停止 loading
@@ -181,22 +188,67 @@ const App: React.FC = () => {
     setImgTimestamp(Date.now()); 
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert("照片檔案太大，請選擇小於 5MB 的照片");
-        return;
-      }
+  // 圖片壓縮功能
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target?.result as string;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                // 設定最大寬度，避免圖片過大
+                const maxWidth = 1024;
+                let width = img.width;
+                let height = img.height;
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        localStorage.setItem('jacob_custom_photo', base64String);
-        setCustomImage(base64String);
-        setImgError(false); // Reset error state as we have a valid image now
-      };
-      reader.readAsDataURL(file);
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx?.drawImage(img, 0, 0, width, height);
+                
+                // 輸出為 JPEG, 品質 0.7
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                resolve(dataUrl);
+            };
+            img.onerror = (err) => reject(err);
+        };
+        reader.onerror = (err) => reject(err);
+    });
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsProcessingImg(true);
+
+    try {
+        const compressedBase64 = await compressImage(file);
+        
+        try {
+            localStorage.setItem('jacob_custom_photo', compressedBase64);
+            setCustomImage(compressedBase64);
+            setImgError(false);
+        } catch (storageErr) {
+            console.error(storageErr);
+            alert("儲存失敗：圖片可能仍然太大，或是儲存空間已滿。建議使用其他照片。");
+        }
+    } catch (err) {
+        console.error("Compression error:", err);
+        alert("圖片處理失敗，請重試。");
+    } finally {
+        setIsProcessingImg(false);
+        // Clear input so same file can be selected again if needed
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
     }
   };
 
@@ -205,7 +257,6 @@ const App: React.FC = () => {
     if (confirm("確定要移除自訂照片，恢復預設嗎？")) {
       localStorage.removeItem('jacob_custom_photo');
       setCustomImage(null);
-      // Try to reload default image
       setImgError(false);
       setImgTimestamp(Date.now());
     }
@@ -222,7 +273,6 @@ const App: React.FC = () => {
   );
 
   // Determine which image source to show
-  // Priority: Custom Image > jacob.jpg > Fallback
   const displayImageSrc = useMemo(() => {
     if (customImage) return customImage;
     if (imgError) return 'https://images.unsplash.com/photo-1519689680058-324335c77eba?q=80&w=2070&auto=format&fit=crop';
@@ -276,19 +326,32 @@ const App: React.FC = () => {
           <>
             {/* Hero Image & Day Counter */}
             <div className="relative w-full h-64 rounded-3xl overflow-hidden shadow-xl group bg-gray-900">
+              {/* Main Image */}
               <img 
                 key={customImage ? 'custom' : imgTimestamp} 
                 src={displayImageSrc}
                 alt="Baby Jacob" 
-                className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 ${!customImage && imgError ? 'opacity-60' : 'opacity-100'}`}
+                className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 ${(!customImage && imgError) || isProcessingImg ? 'opacity-50' : 'opacity-100'}`}
                 onError={(e) => {
-                  if (!customImage) {
-                    console.error("Failed to load /jacob.jpg");
-                    setImgError(true);
+                  console.warn("Image load failed");
+                  // If custom image fails, it might be corrupt data, revert to default
+                  if (customImage) {
+                      setCustomImage(null);
+                      localStorage.removeItem('jacob_custom_photo');
+                  } else {
+                      setImgError(true);
                   }
                 }}
               />
               
+              {/* Processing Overlay */}
+              {isProcessingImg && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 z-40 backdrop-blur-sm">
+                      <Loader2 className="w-10 h-10 text-white animate-spin mb-2" />
+                      <p className="text-white font-bold text-sm">正在處理圖片...</p>
+                  </div>
+              )}
+
               {/* Image Control Buttons */}
               <div className="absolute top-4 right-4 flex gap-2 z-30">
                  <input 
@@ -298,39 +361,42 @@ const App: React.FC = () => {
                    accept="image/*"
                    onChange={handlePhotoUpload}
                  />
-                 <button 
-                    onClick={() => fileInputRef.current?.click()}
-                    className="p-2 bg-white/20 backdrop-blur-md hover:bg-white/40 text-white rounded-full transition-all shadow-sm"
-                    title="更換照片"
-                 >
-                    <Camera className="w-5 h-5" />
-                 </button>
                  
-                 {customImage && (
-                   <button 
-                      onClick={handleRemovePhoto}
-                      className="p-2 bg-red-500/20 backdrop-blur-md hover:bg-red-500/40 text-white rounded-full transition-all shadow-sm"
-                      title="移除照片"
-                   >
-                      <X className="w-5 h-5" />
-                   </button>
+                 {/* Only show upload button when not processing */}
+                 {!isProcessingImg && (
+                    <>
+                         <button 
+                            onClick={() => fileInputRef.current?.click()}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-black/30 backdrop-blur-md hover:bg-black/50 text-white rounded-full transition-all shadow-sm border border-white/20"
+                        >
+                            <Camera className="w-4 h-4" />
+                            <span className="text-xs font-bold">{customImage ? '更換' : '上傳'}</span>
+                        </button>
+                        
+                        {customImage && (
+                        <button 
+                            onClick={handleRemovePhoto}
+                            className="p-1.5 bg-red-500/80 backdrop-blur-md hover:bg-red-600 text-white rounded-full transition-all shadow-sm"
+                            title="恢復預設"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                        )}
+                    </>
                  )}
               </div>
 
-              {/* Error State Overlay (Only if no custom image and load failed) */}
-              {!customImage && imgError && (
+              {/* Fallback Warning (Only if strictly needed) */}
+              {!customImage && imgError && !isProcessingImg && (
                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 z-20 pointer-events-none">
                     <div className="bg-white/90 p-3 rounded-xl flex flex-col items-center gap-2 shadow-lg max-w-[80%] text-center backdrop-blur-sm pointer-events-auto">
                         <ImageIcon className="w-6 h-6 text-gray-500" />
-                        <p className="text-xs font-bold text-gray-700">找不到 jacob.jpg</p>
-                        <p className="text-[10px] text-gray-500 leading-tight mb-2">
-                           您可以點擊右上角的相機圖示<br/>直接上傳照片
-                        </p>
+                        <p className="text-xs font-bold text-gray-700">找不到預設照片</p>
                         <button 
                             onClick={handleRetryImage}
                             className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg flex items-center gap-1 hover:bg-blue-700 transition-colors"
                         >
-                            <RefreshCw className="w-3 h-3" /> 重試讀取
+                            <RefreshCw className="w-3 h-3" /> 重試
                         </button>
                     </div>
                  </div>
