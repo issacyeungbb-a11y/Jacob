@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { BabyLog, LogType, FeedLog, DiaperLog, SleepLog, HealthLog, OtherLog } from '../types';
-import { Milk, Baby, Moon, Activity, Trash2, StickyNote, Sunrise, Sun, Sunset, MoonStar, Clock } from 'lucide-react';
+import { Milk, Baby, Moon, Activity, Trash2, StickyNote, Sunrise, Sun, Sunset, MoonStar, Clock, AlertTriangle } from 'lucide-react';
 
 interface LogListProps {
   logs: BabyLog[];
@@ -19,12 +20,23 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog, feedInterva
       case LogType.SLEEP: return <Moon className="w-5 h-5 text-indigo-500" />;
       case LogType.HEALTH: return <Activity className="w-5 h-5 text-emerald-500" />;
       case LogType.OTHER: return <StickyNote className="w-5 h-5 text-pink-500" />;
+      default: return <AlertTriangle className="w-5 h-5 text-gray-400" />;
     }
   };
 
   // Helper to determine time period styling
   const getTimePeriodStyle = (dateStr: string) => {
     const date = new Date(dateStr);
+    if (isNaN(date.getTime())) {
+        return {
+            label: '錯誤',
+            icon: <AlertTriangle className="w-3 h-3" />,
+            bgColor: 'bg-red-50',
+            textColor: 'text-red-500',
+            borderColor: 'border-red-300'
+        };
+    }
+
     const hour = date.getHours();
 
     // 00:00 - 05:59: 凌晨 (Late Night)
@@ -68,35 +80,42 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog, feedInterva
   };
 
   const getDetails = (log: BabyLog) => {
-    switch (log.type) {
-      case LogType.FEED:
-        const f = log as FeedLog;
-        return `${f.amountMl}ml - ${f.feedType}`;
-      case LogType.DIAPER:
-        return (log as DiaperLog).status;
-      case LogType.SLEEP:
-        // Calculate start time based on end time (timestamp) and duration
-        const durationMins = (log as SleepLog).durationMinutes;
-        const endTime = new Date(log.timestamp);
-        const startTime = new Date(endTime.getTime() - durationMins * 60000);
-        
-        const formatTime = (d: Date) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        
-        const hours = Math.floor(durationMins / 60);
-        const mins = durationMins % 60;
-        const durationStr = `${hours > 0 ? `${hours}小時 ` : ''}${mins}分鐘`;
-        
-        return `${formatTime(startTime)} - ${formatTime(endTime)}\n(${durationStr})`;
-      case LogType.HEALTH:
-        const h = log as HealthLog;
-        return [
-           h.weightKg ? `${h.weightKg}kg` : '',
-           h.heightCm ? `${h.heightCm}cm` : '',
-           h.headCircumferenceCm ? `頭圍 ${h.headCircumferenceCm}cm` : ''
-        ].filter(Boolean).join(', ');
-      case LogType.OTHER:
-        return (log as OtherLog).details;
-      default: return '';
+    try {
+        switch (log.type) {
+        case LogType.FEED:
+            const f = log as FeedLog;
+            return `${f.amountMl || 0}ml - ${f.feedType || '未知'}`;
+        case LogType.DIAPER:
+            return (log as DiaperLog).status || '未知狀態';
+        case LogType.SLEEP:
+            // Calculate start time based on end time (timestamp) and duration
+            const durationMins = (log as SleepLog).durationMinutes || 0;
+            const endTime = new Date(log.timestamp);
+            
+            if (isNaN(endTime.getTime())) return "時間格式錯誤";
+
+            const startTime = new Date(endTime.getTime() - durationMins * 60000);
+            
+            const formatTime = (d: Date) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            const hours = Math.floor(durationMins / 60);
+            const mins = durationMins % 60;
+            const durationStr = `${hours > 0 ? `${hours}小時 ` : ''}${mins}分鐘`;
+            
+            return `${formatTime(startTime)} - ${formatTime(endTime)}\n(${durationStr})`;
+        case LogType.HEALTH:
+            const h = log as HealthLog;
+            return [
+            h.weightKg ? `${h.weightKg}kg` : '',
+            h.heightCm ? `${h.heightCm}cm` : '',
+            h.headCircumferenceCm ? `頭圍 ${h.headCircumferenceCm}cm` : ''
+            ].filter(Boolean).join(', ') || '無數值';
+        case LogType.OTHER:
+            return (log as OtherLog).details || '無內容';
+        default: return '';
+        }
+    } catch (e) {
+        return '資料格式錯誤';
     }
   };
 
@@ -106,6 +125,11 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog, feedInterva
         const timeStyle = getTimePeriodStyle(log.timestamp);
         const feedInterval = (log.type === LogType.FEED && feedIntervals) ? feedIntervals[log.id] : null;
         
+        let timeString = "--:--";
+        try {
+            timeString = new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } catch(e) { /* ignore */ }
+
         return (
           <div 
             key={log.id} 
@@ -126,7 +150,7 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog, feedInterva
                    </span>
                    {/* Actual Time */}
                    <span className="font-bold text-gray-800 text-sm">
-                     {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                     {timeString}
                    </span>
                    
                    {/* Feed Interval Display */}

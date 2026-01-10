@@ -1,3 +1,4 @@
+
 import { db } from './firebase';
 import { 
   collection, 
@@ -14,7 +15,7 @@ const COLLECTION_NAME = 'jacob_logs';
 const STATUS_DOC_ID = 'status_sleep'; // Special document to track active sleep
 
 // 監聽資料庫變更 (即時同步)
-export const subscribeToLogs = (onUpdate: (logs: BabyLog[]) => void) => {
+export const subscribeToLogs = (onUpdate: (logs: BabyLog[]) => void, onError?: (error: any) => void) => {
   // Filter out the status document from the main log list
   const q = query(collection(db, COLLECTION_NAME), orderBy("timestamp", "desc"));
   
@@ -29,6 +30,7 @@ export const subscribeToLogs = (onUpdate: (logs: BabyLog[]) => void) => {
     onUpdate(logs);
   }, (error) => {
     console.error("Firebase sync error:", error);
+    if (onError) onError(error);
   });
 
   return unsubscribe;

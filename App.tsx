@@ -26,7 +26,9 @@ import {
   History,
   BarChart2,
   BrainCircuit,
-  Plus
+  Plus,
+  Loader2,
+  WifiOff
 } from 'lucide-react';
 import { BABY_NAME, BIRTH_DATE } from './constants';
 
@@ -67,7 +69,6 @@ const App: React.FC = () => {
     return new Date(date.getTime() - offset).toISOString().split('T')[0];
   };
 
-  // Fix: Completed the missing state and logic for App component
   const [activeView, setActiveView] = useState<AppView>('HOME');
   const [logs, setLogs] = useState<BabyLog[]>([]);
   const [isSleeping, setIsSleeping] = useState(false);
@@ -75,11 +76,28 @@ const App: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>(getLocalDateString(new Date()));
   const [insights, setInsights] = useState<string>("");
   const [isGeneratingInsights, setIsGeneratingInsights] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribeLogs = subscribeToLogs((updatedLogs) => {
-      setLogs(updatedLogs);
-    });
+    // 設置超時檢查，若 Firebase 太久沒反應則停止 loading
+    const timeout = setTimeout(() => {
+        if (isLoading) setIsLoading(false);
+    }, 5000);
+
+    const unsubscribeLogs = subscribeToLogs(
+        (updatedLogs) => {
+            setLogs(updatedLogs);
+            setIsLoading(false);
+            setError(null);
+        },
+        (err) => {
+            console.error(err);
+            setError("無法連結資料庫，請檢查權限或網絡。");
+            setIsLoading(false);
+        }
+    );
+
     const unsubscribeSleep = subscribeToSleepStatus((startTime) => {
       setIsSleeping(!!startTime);
       setSleepStartTime(startTime);
@@ -88,6 +106,7 @@ const App: React.FC = () => {
     return () => {
       unsubscribeLogs();
       unsubscribeSleep();
+      clearTimeout(timeout);
     };
   }, []);
 
@@ -112,10 +131,12 @@ const App: React.FC = () => {
     for (let i = 1; i < feeds.length; i++) {
         const current = new Date(feeds[i].timestamp).getTime();
         const prev = new Date(feeds[i-1].timestamp).getTime();
-        const diffMs = current - prev;
-        const hrs = Math.floor(diffMs / (1000 * 60 * 60));
-        const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-        intervals[feeds[i].id] = `${hrs}h ${mins}m`;
+        if (!isNaN(current) && !isNaN(prev)) {
+            const diffMs = current - prev;
+            const hrs = Math.floor(diffMs / (1000 * 60 * 60));
+            const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            intervals[feeds[i].id] = `${hrs}h ${mins}m`;
+        }
     }
     return intervals;
   }, [logs]);
@@ -137,6 +158,15 @@ const App: React.FC = () => {
     </button>
   );
 
+  if (isLoading) {
+      return (
+          <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
+              <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+              <p className="text-gray-500 font-medium animate-pulse">正在同步 Jacob 的資料...</p>
+          </div>
+      );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
       {/* Header */}
@@ -148,9 +178,17 @@ const App: React.FC = () => {
              </div>
              <div>
                <h1 className="text-xl font-black text-gray-800 tracking-tight">{BABY_NAME} 的日記</h1>
-               <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest flex items-center gap-1">
-                 <CloudLightning className="w-3 h-3" /> 即時同步中
-               </p>
+               <div className="flex items-center gap-2">
+                 {error ? (
+                     <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest flex items-center gap-1">
+                        <WifiOff className="w-3 h-3" /> {error}
+                     </span>
+                 ) : (
+                    <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest flex items-center gap-1">
+                        <CloudLightning className="w-3 h-3" /> 即時同步中
+                    </p>
+                 )}
+               </div>
              </div>
           </div>
           <button 
@@ -281,5 +319,4 @@ const App: React.FC = () => {
   );
 };
 
-// Fix: Added the missing default export to satisfy index.tsx import
 export default App;
