@@ -1,7 +1,18 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BabyLog, LogType, FeedLog, SleepLog } from './types';
-import { subscribeToLogs, subscribeToSleepStatus, addLogToCloud, deleteLogFromCloud, exportLogsToJSON, setSleepStatus, clearSleepStatus } from './services/storageService';
+import { 
+  subscribeToLogs, 
+  subscribeToSleepStatus, 
+  subscribeToProfilePhoto, // New Import
+  addLogToCloud, 
+  deleteLogFromCloud, 
+  exportLogsToJSON, 
+  setSleepStatus, 
+  clearSleepStatus,
+  uploadProfilePhotoToCloud, // New Import
+  deleteProfilePhotoFromCloud // New Import
+} from './services/storageService';
 import { isConfigured } from './services/firebase';
 import { generateBabyInsights } from './services/geminiService';
 import { Dashboard } from './components/Dashboard';
@@ -89,22 +100,12 @@ const App: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Load custom image from local storage
-    try {
-        const savedImage = localStorage.getItem('jacob_custom_photo');
-        if (savedImage) {
-            setCustomImage(savedImage);
-        }
-    } catch (e) {
-        console.error("Failed to load image from storage", e);
-        localStorage.removeItem('jacob_custom_photo');
-    }
-
     // 設置超時檢查，若 Firebase 太久沒反應則停止 loading
     const timeout = setTimeout(() => {
         if (isLoading) setIsLoading(false);
     }, 5000);
 
+    // 1. 訂閱記錄
     const unsubscribeLogs = subscribeToLogs(
         (updatedLogs) => {
             const validLogs = updatedLogs.filter(l => l.timestamp && !isNaN(new Date(l.timestamp).getTime()));
@@ -119,14 +120,22 @@ const App: React.FC = () => {
         }
     );
 
+    // 2. 訂閱睡眠狀態
     const unsubscribeSleep = subscribeToSleepStatus((startTime) => {
       setIsSleeping(!!startTime);
       setSleepStartTime(startTime);
     });
 
+    // 3. 訂閱封面照片 (雲端同步)
+    const unsubscribePhoto = subscribeToProfilePhoto((photoBase64) => {
+      setCustomImage(photoBase64);
+      setImgError(false); // 重設錯誤狀態，因為可能從雲端載入了有效圖片
+    });
+
     return () => {
       unsubscribeLogs();
       unsubscribeSleep();
+      unsubscribePhoto();
       clearTimeout(timeout);
     };
   }, []);
@@ -188,7 +197,7 @@ const App: React.FC = () => {
     setImgTimestamp(Date.now()); 
   };
 
-  // 圖片壓縮功能
+  // 圖片壓縮功能 (調整為更小的尺寸以適應 Firestore 限制)
   const compressImage = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -198,8 +207,9 @@ const App: React.FC = () => {
             img.src = event.target?.result as string;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                // 設定最大寬度，避免圖片過大
-                const maxWidth = 1024;
+                // Firestore 單文件限制 1MB。
+                // 將最大寬度設為 800px，品質 0.6，確保 Base64 字串夠小。
+                const maxWidth = 800;
                 let width = img.width;
                 let height = img.height;
 
@@ -213,8 +223,8 @@ const App: React.FC = () => {
                 const ctx = canvas.getContext('2d');
                 ctx?.drawImage(img, 0, 0, width, height);
                 
-                // 輸出為 JPEG, 品質 0.7
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                // 輸出為 JPEG, 品質 0.6
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
                 resolve(dataUrl);
             };
             img.onerror = (err) => reject(err);
@@ -233,12 +243,12 @@ const App: React.FC = () => {
         const compressedBase64 = await compressImage(file);
         
         try {
-            localStorage.setItem('jacob_custom_photo', compressedBase64);
-            setCustomImage(compressedBase64);
-            setImgError(false);
+            // 上傳到雲端 Firestore
+            await uploadProfilePhotoToCloud(compressedBase64);
+            // 狀態更新會由 subscribeToProfilePhoto 自動處理
         } catch (storageErr) {
             console.error(storageErr);
-            alert("儲存失敗：圖片可能仍然太大，或是儲存空間已滿。建議使用其他照片。");
+            alert("上傳失敗：請檢查網路連線。");
         }
     } catch (err) {
         console.error("Compression error:", err);
@@ -252,13 +262,17 @@ const App: React.FC = () => {
     }
   };
 
-  const handleRemovePhoto = (e: React.MouseEvent) => {
+  const handleRemovePhoto = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm("確定要移除自訂照片，恢復預設嗎？")) {
-      localStorage.removeItem('jacob_custom_photo');
-      setCustomImage(null);
-      setImgError(false);
-      setImgTimestamp(Date.now());
+    if (confirm("確定要移除自訂照片，恢復預設嗎？這會影響所有裝置。")) {
+      try {
+        await deleteProfilePhotoFromCloud();
+        setCustomImage(null);
+        setImgError(false);
+        setImgTimestamp(Date.now());
+      } catch (e) {
+        alert("移除失敗，請稍後再試");
+      }
     }
   };
 
@@ -334,13 +348,7 @@ const App: React.FC = () => {
                 className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 ${(!customImage && imgError) || isProcessingImg ? 'opacity-50' : 'opacity-100'}`}
                 onError={(e) => {
                   console.warn("Image load failed");
-                  // If custom image fails, it might be corrupt data, revert to default
-                  if (customImage) {
-                      setCustomImage(null);
-                      localStorage.removeItem('jacob_custom_photo');
-                  } else {
-                      setImgError(true);
-                  }
+                  setImgError(true);
                 }}
               />
               
@@ -348,7 +356,7 @@ const App: React.FC = () => {
               {isProcessingImg && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 z-40 backdrop-blur-sm">
                       <Loader2 className="w-10 h-10 text-white animate-spin mb-2" />
-                      <p className="text-white font-bold text-sm">正在處理圖片...</p>
+                      <p className="text-white font-bold text-sm">正在同步到雲端...</p>
                   </div>
               )}
 

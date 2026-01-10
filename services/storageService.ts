@@ -3,6 +3,8 @@ import { db } from './firebase';
 import { BabyLog } from '../types';
 
 const COLLECTION_NAME = 'jacob_logs';
+const SETTINGS_COLLECTION = 'jacob_settings'; // New collection for app-wide settings
+const PHOTO_DOC_ID = 'profile_photo';
 const STATUS_DOC_ID = 'status_sleep'; // Special document to track active sleep
 
 // 監聽資料庫變更 (即時同步)
@@ -38,6 +40,42 @@ export const subscribeToSleepStatus = (onUpdate: (startTime: string | null) => v
       }
     });
   return unsubscribe;
+};
+
+// 監聽雲端封面照片
+export const subscribeToProfilePhoto = (onUpdate: (photoBase64: string | null) => void) => {
+  const unsubscribe = db.collection(SETTINGS_COLLECTION).doc(PHOTO_DOC_ID)
+    .onSnapshot((doc) => {
+      if (doc.exists && doc.data()?.image) {
+        onUpdate(doc.data().image);
+      } else {
+        onUpdate(null);
+      }
+    });
+  return unsubscribe;
+};
+
+// 上傳封面照片到雲端
+export const uploadProfilePhotoToCloud = async (base64Image: string) => {
+  try {
+    await db.collection(SETTINGS_COLLECTION).doc(PHOTO_DOC_ID).set({
+      image: base64Image,
+      updatedAt: new Date().toISOString()
+    });
+  } catch (e) {
+    console.error("Error uploading photo:", e);
+    throw e;
+  }
+};
+
+// 刪除雲端封面照片
+export const deleteProfilePhotoFromCloud = async () => {
+  try {
+    await db.collection(SETTINGS_COLLECTION).doc(PHOTO_DOC_ID).delete();
+  } catch (e) {
+    console.error("Error deleting photo:", e);
+    throw e;
+  }
 };
 
 // 設定開始睡眠
