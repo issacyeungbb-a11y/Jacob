@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { LogType, FeedType, DiaperType, BabyLog, HealthLog } from '../types';
-import { PlusCircle, CalendarDays, Moon, ArrowRight, Play, Square, History, Weight, Ruler, Activity, Clock } from 'lucide-react';
+import { LogType, FeedType, DiaperType, BabyLog, HealthLog, SleepQuality, SummaryLog } from '../types';
+import { PlusCircle, CalendarDays, Moon, ArrowRight, Play, Square, History, Weight, Ruler, Activity, Clock, Smile, Meh, Frown, ClipboardCheck, Star, Sun } from 'lucide-react';
 
 interface LogFormProps {
   onAddLog: (log: BabyLog) => void;
@@ -16,7 +16,7 @@ type HealthSubType = 'WEIGHT' | 'HEIGHT' | 'HEAD';
 
 export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepStartTime, onStartSleep, onEndSleep, lastFeedTime }) => {
   const [activeType, setActiveType] = useState<LogType>(LogType.FEED);
-  const [mode, setMode] = useState<'LIVE' | 'MANUAL'>('LIVE');
+  const [mode, setMode] = useState<'LIVE' | 'QUICK'>('LIVE'); 
   
   const toLocalISO = (date: Date) => {
     const offset = date.getTimezoneOffset() * 60000;
@@ -26,10 +26,22 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
   const [amount, setAmount] = useState<number>(120);
   const [feedType, setFeedType] = useState<FeedType>(FeedType.FORMULA);
   const [diaperStatus, setDiaperStatus] = useState<DiaperType>(DiaperType.WET);
+  
+  // Live Mode State
   const [startSleepInput, setStartSleepInput] = useState<string>(toLocalISO(new Date()));
   const [endSleepInput, setEndSleepInput] = useState<string>(toLocalISO(new Date()));
-  const [manualSleepStart, setManualSleepStart] = useState<string>(toLocalISO(new Date(Date.now() - 60 * 60 * 1000)));
-  const [manualSleepEnd, setManualSleepEnd] = useState<string>(toLocalISO(new Date()));
+  
+  // Quick Mode State
+  const [quickSleepEnd, setQuickSleepEnd] = useState<string>(toLocalISO(new Date()));
+  const [quickDuration, setQuickDuration] = useState<number>(60);
+  const [sleepQuality, setSleepQuality] = useState<SleepQuality>('GOOD');
+
+  // Summary Mode State
+  const [summaryRating, setSummaryRating] = useState<1|2|3|4|5>(4);
+  const [nightWakings, setNightWakings] = useState<number>(1);
+  const [summaryMood, setSummaryMood] = useState<'HAPPY' | 'NORMAL' | 'FUSSY'>('HAPPY');
+  const [approxSleepHours, setApproxSleepHours] = useState<number>(12);
+
   const [healthSubType, setHealthSubType] = useState<HealthSubType>('WEIGHT');
   const [healthValue, setHealthValue] = useState<string>("");
   const [otherDetails, setOtherDetails] = useState<string>("");
@@ -47,15 +59,12 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
   }, [date, lastFeedTime, activeType]);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-        if (isSleeping) {
-            setEndSleepInput(toLocalISO(new Date()));
-        } else {
-            setStartSleepInput(toLocalISO(new Date()));
-        }
-    }, 60000);
-    return () => clearInterval(timer);
-  }, [isSleeping]);
+    if (!isSleeping) {
+        setStartSleepInput(toLocalISO(new Date()));
+        setEndSleepInput(toLocalISO(new Date()));
+        setQuickSleepEnd(toLocalISO(new Date()));
+    }
+  }, [isSleeping, activeType]);
 
   const setQuickTime = (minutesOffset: number) => {
     const now = new Date();
@@ -81,7 +90,8 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
         id: Date.now().toString(),
         timestamp: new Date(endSleepInput).toISOString(),
         type: LogType.SLEEP,
-        durationMinutes: duration
+        durationMinutes: duration,
+        quality: sleepQuality 
     };
     onEndSleep(newLog);
   };
@@ -91,19 +101,23 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
     let newLog: BabyLog;
     const id = Date.now().toString();
 
-    if (activeType === LogType.SLEEP && mode === 'MANUAL') {
-        const start = new Date(manualSleepStart).getTime();
-        const end = new Date(manualSleepEnd).getTime();
-        const duration = Math.floor((end - start) / (1000 * 60));
-        if (duration <= 0) {
-            alert("結束時間必須晚於開始時間");
-            return;
-        }
+    if (activeType === LogType.SLEEP && mode === 'QUICK') {
         newLog = {
             id,
-            timestamp: new Date(manualSleepEnd).toISOString(),
+            timestamp: new Date(quickSleepEnd).toISOString(),
             type: LogType.SLEEP,
-            durationMinutes: duration
+            durationMinutes: quickDuration,
+            quality: sleepQuality
+        };
+    } else if (activeType === LogType.SUMMARY) {
+        newLog = {
+            id,
+            timestamp: new Date(date).toISOString(),
+            type: LogType.SUMMARY,
+            rating: summaryRating,
+            nightWakings,
+            mood: summaryMood,
+            approxSleepHours
         };
     } else {
         const baseLog = {
@@ -124,11 +138,7 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
                     alert("請輸入有效的數值");
                     return;
                 }
-                // 重要：動態建立物件，避免包含 undefined 導致 Firebase 報錯
-                const hLog: any = { 
-                    ...baseLog, 
-                    type: LogType.HEALTH 
-                };
+                const hLog: any = { ...baseLog, type: LogType.HEALTH };
                 if (healthSubType === 'WEIGHT') hLog.weightKg = val;
                 else if (healthSubType === 'HEIGHT') hLog.heightCm = val;
                 else if (healthSubType === 'HEAD') hLog.headCircumferenceCm = val;
@@ -144,11 +154,12 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
 
     onAddLog(newLog);
     
-    // 重設欄位
+    // Reset fields
     setHealthValue("");
     setOtherDetails("");
     const now = new Date();
     setDate(toLocalISO(now));
+    setQuickSleepEnd(toLocalISO(now));
   };
 
   const TabButton = ({ type, label }: { type: LogType, label: string }) => (
@@ -165,6 +176,21 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
     </button>
   );
 
+  const QualityButton = ({ q, label, icon: Icon, colorClass }: { q: SleepQuality, label: string, icon: any, colorClass: string }) => (
+      <button
+        type="button"
+        onClick={() => setSleepQuality(q)}
+        className={`flex-1 py-3 rounded-xl flex flex-col items-center gap-1 transition-all border-2 ${
+            sleepQuality === q 
+            ? `${colorClass} bg-white shadow-sm` 
+            : 'border-transparent bg-gray-50 text-gray-400 hover:bg-gray-100'
+        }`}
+      >
+          <Icon className={`w-6 h-6 ${sleepQuality === q ? '' : 'text-gray-400'}`} />
+          <span className="text-xs font-bold">{label}</span>
+      </button>
+  );
+
   return (
     <div className="bg-white rounded-3xl shadow-lg p-6 mb-6">
       <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -176,6 +202,7 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
         <TabButton type={LogType.FEED} label="飲食" />
         <TabButton type={LogType.DIAPER} label="尿片" />
         <TabButton type={LogType.SLEEP} label="睡眠" />
+        <TabButton type={LogType.SUMMARY} label="總結" />
         <TabButton type={LogType.HEALTH} label="健康" />
         <TabButton type={LogType.OTHER} label="其他" />
       </div>
@@ -185,16 +212,17 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
              <div className="flex bg-gray-100 p-1 rounded-xl mb-4">
                 <button 
                     onClick={() => setMode('LIVE')}
-                    className={`flex-1 py-1.5 rounded-lg text-sm font-bold transition-all ${mode === 'LIVE' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500'}`}
+                    className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${mode === 'LIVE' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500'}`}
                 >
-                    即時開關
+                    <Play className="w-3 h-3" />
+                    即時計時
                 </button>
                 <button 
-                    onClick={() => setMode('MANUAL')}
-                    className={`flex-1 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-1 ${mode === 'MANUAL' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500'}`}
+                    onClick={() => setMode('QUICK')}
+                    className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${mode === 'QUICK' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500'}`}
                 >
                     <History className="w-3 h-3" />
-                    手動補登
+                    快速補登
                 </button>
              </div>
 
@@ -210,6 +238,13 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
                                 onChange={(e) => setEndSleepInput(e.target.value)}
                                 className="w-full p-3 rounded-xl bg-white border border-indigo-200 focus:ring-2 focus:ring-indigo-500 outline-none mb-4"
                             />
+                            
+                           <div className="flex gap-2 mb-4">
+                              <QualityButton q="GOOD" label="安穩" icon={Smile} colorClass="border-emerald-500 text-emerald-600" />
+                              <QualityButton q="OK" label="普通" icon={Meh} colorClass="border-amber-500 text-amber-600" />
+                              <QualityButton q="BAD" label="哭鬧" icon={Frown} colorClass="border-red-500 text-red-600" />
+                           </div>
+
                            <button 
                               onClick={handleWakeUp}
                               className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2 text-lg"
@@ -239,44 +274,184 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
                  </div>
              )}
 
-             {mode === 'MANUAL' && (
+             {mode === 'QUICK' && (
                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-1 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-                                <Moon className="w-4 h-4 text-indigo-400" /> 入睡時間
+                    <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100">
+                        {/* 1. When did he wake up? */}
+                        <div className="mb-4">
+                            <label className="block text-sm font-bold text-gray-700 mb-1 flex items-center gap-1">
+                                <Moon className="w-4 h-4 text-indigo-400" /> 什麼時候醒來？
                             </label>
                             <input
                                 type="datetime-local"
-                                value={manualSleepStart}
-                                onChange={(e) => setManualSleepStart(e.target.value)}
-                                className="w-full p-3 rounded-xl bg-indigo-50 border border-indigo-200 focus:ring-2 focus:ring-indigo-500 outline-none"
+                                value={quickSleepEnd}
+                                onChange={(e) => setQuickSleepEnd(e.target.value)}
+                                className="w-full p-3 rounded-xl bg-white border border-indigo-200 focus:ring-2 focus:ring-indigo-500 outline-none"
                             />
                         </div>
-                        <div className="flex justify-center -my-2">
-                            <ArrowRight className="w-5 h-5 text-indigo-300 rotate-90" />
+
+                        {/* 2. How long? (Chips) */}
+                        <div className="mb-4">
+                             <label className="block text-sm font-bold text-gray-700 mb-2">睡了大概多久？</label>
+                             <div className="grid grid-cols-3 gap-2">
+                                {[30, 45, 60, 90, 120, 180].map(mins => (
+                                    <button
+                                        key={mins}
+                                        type="button"
+                                        onClick={() => setQuickDuration(mins)}
+                                        className={`py-2 rounded-lg text-xs font-bold transition-all ${
+                                            quickDuration === mins 
+                                            ? 'bg-indigo-600 text-white shadow-md' 
+                                            : 'bg-white text-gray-500 border border-indigo-100 hover:bg-indigo-50'
+                                        }`}
+                                    >
+                                        {mins >= 60 ? `${mins/60}小時` : `${mins}分`}
+                                        {mins % 60 !== 0 && mins > 60 && `${mins%60}分`}
+                                    </button>
+                                ))}
+                             </div>
+                             <div className="mt-2 flex items-center gap-2">
+                                <span className="text-xs text-gray-500">或手動輸入:</span>
+                                <input 
+                                    type="number" 
+                                    value={quickDuration}
+                                    onChange={(e) => setQuickDuration(Number(e.target.value))}
+                                    className="w-20 p-1 text-center rounded-md border border-gray-300 text-sm"
+                                />
+                                <span className="text-xs text-gray-500">分鐘</span>
+                             </div>
                         </div>
+
+                        {/* 3. Quality */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-                                <Moon className="w-4 h-4 text-indigo-400" /> 醒來時間
-                            </label>
-                            <input
-                                type="datetime-local"
-                                value={manualSleepEnd}
-                                onChange={(e) => setManualSleepEnd(e.target.value)}
-                                className="w-full p-3 rounded-xl bg-indigo-50 border border-indigo-200 focus:ring-2 focus:ring-indigo-500 outline-none"
-                            />
+                           <label className="block text-sm font-bold text-gray-700 mb-2">睡得好嗎？</label>
+                           <div className="flex gap-2">
+                              <QualityButton q="GOOD" label="安穩" icon={Smile} colorClass="border-emerald-500 text-emerald-600" />
+                              <QualityButton q="OK" label="普通" icon={Meh} colorClass="border-amber-500 text-amber-600" />
+                              <QualityButton q="BAD" label="哭鬧" icon={Frown} colorClass="border-red-500 text-red-600" />
+                           </div>
                         </div>
                     </div>
+
                     <button
                         type="submit"
                         className="w-full mt-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-colors flex items-center justify-center gap-2"
                     >
-                        補登記錄
+                        補登睡眠記錄
                     </button>
                  </form>
              )}
           </div>
+      ) : activeType === LogType.SUMMARY ? (
+        <form onSubmit={handleSubmit} className="space-y-4">
+             <div className="flex justify-between items-end mb-2">
+                <label className="block text-sm font-medium text-gray-700 flex items-center gap-1">
+                <CalendarDays className="w-4 h-4 text-gray-400" />
+                評估日期
+                </label>
+             </div>
+             <input
+                type="datetime-local"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full p-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-amber-500 outline-none font-medium text-gray-700"
+                required
+             />
+
+             <div className="bg-amber-50 p-5 rounded-2xl border border-amber-100 space-y-5">
+                 {/* Rating */}
+                 <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1">
+                        <Star className="w-4 h-4 text-amber-500 fill-current" />
+                        整體評分 (1-5星)
+                    </label>
+                    <div className="flex gap-2 justify-between">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                                key={star}
+                                type="button"
+                                onClick={() => setSummaryRating(star as any)}
+                                className={`w-10 h-10 rounded-full flex items-center justify-center text-lg transition-all ${summaryRating >= star ? 'bg-amber-400 text-white shadow-md scale-110' : 'bg-white text-gray-300'}`}
+                            >
+                                ★
+                            </button>
+                        ))}
+                    </div>
+                 </div>
+
+                 {/* Night Wakings */}
+                 <div>
+                     <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1">
+                        <Moon className="w-4 h-4 text-indigo-500" />
+                        夜醒次數
+                     </label>
+                     <div className="flex items-center gap-4 bg-white p-2 rounded-xl border border-amber-200">
+                         <button type="button" onClick={() => setNightWakings(Math.max(0, nightWakings - 1))} className="w-10 h-10 bg-amber-100 text-amber-700 rounded-lg font-bold text-xl">-</button>
+                         <span className="flex-1 text-center font-black text-2xl text-gray-700">{nightWakings} 次</span>
+                         <button type="button" onClick={() => setNightWakings(nightWakings + 1)} className="w-10 h-10 bg-amber-100 text-amber-700 rounded-lg font-bold text-xl">+</button>
+                     </div>
+                 </div>
+
+                 {/* Mood */}
+                 <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1">
+                        <Sun className="w-4 h-4 text-orange-500" />
+                        日間情緒
+                    </label>
+                    <div className="flex gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setSummaryMood('HAPPY')}
+                            className={`flex-1 py-2 rounded-xl flex flex-col items-center gap-1 transition-all border-2 ${summaryMood === 'HAPPY' ? 'border-orange-400 bg-white shadow-sm' : 'border-transparent bg-white/50 text-gray-400'}`}
+                        >
+                            <Smile className={`w-8 h-8 ${summaryMood === 'HAPPY' ? 'text-orange-500' : 'text-gray-300'}`} />
+                            <span className="text-xs font-bold">開心</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setSummaryMood('NORMAL')}
+                            className={`flex-1 py-2 rounded-xl flex flex-col items-center gap-1 transition-all border-2 ${summaryMood === 'NORMAL' ? 'border-orange-400 bg-white shadow-sm' : 'border-transparent bg-white/50 text-gray-400'}`}
+                        >
+                            <Meh className={`w-8 h-8 ${summaryMood === 'NORMAL' ? 'text-orange-500' : 'text-gray-300'}`} />
+                            <span className="text-xs font-bold">普通</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setSummaryMood('FUSSY')}
+                            className={`flex-1 py-2 rounded-xl flex flex-col items-center gap-1 transition-all border-2 ${summaryMood === 'FUSSY' ? 'border-orange-400 bg-white shadow-sm' : 'border-transparent bg-white/50 text-gray-400'}`}
+                        >
+                            <Frown className={`w-8 h-8 ${summaryMood === 'FUSSY' ? 'text-orange-500' : 'text-gray-300'}`} />
+                            <span className="text-xs font-bold">煩躁</span>
+                        </button>
+                    </div>
+                 </div>
+
+                 {/* Approx Hours */}
+                 <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                        估計總時數 (約)
+                    </label>
+                    <div className="flex items-center gap-3">
+                         <input 
+                            type="range" 
+                            min="0" max="24" step="0.5"
+                            value={approxSleepHours}
+                            onChange={(e) => setApproxSleepHours(parseFloat(e.target.value))}
+                            className="w-full h-2 bg-amber-200 rounded-lg appearance-none cursor-pointer"
+                         />
+                         <span className="font-black text-amber-700 w-16 text-right">{approxSleepHours} h</span>
+                    </div>
+                 </div>
+             </div>
+
+             <button
+                type="submit"
+                className="w-full mt-4 py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl shadow-md transition-colors flex items-center justify-center gap-2"
+            >
+                <ClipboardCheck className="w-5 h-5" />
+                儲存今日總結
+            </button>
+        </form>
       ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
