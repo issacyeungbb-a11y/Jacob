@@ -4,14 +4,14 @@ import { BabyLog, LogType, FeedLog, SleepLog } from './types';
 import { 
   subscribeToLogs, 
   subscribeToSleepStatus, 
-  subscribeToProfilePhoto, // New Import
+  subscribeToProfilePhoto, 
   addLogToCloud, 
   deleteLogFromCloud, 
   exportLogsToJSON, 
   setSleepStatus, 
   clearSleepStatus,
-  uploadProfilePhotoToCloud, // New Import
-  deleteProfilePhotoFromCloud // New Import
+  uploadProfilePhotoToCloud, 
+  deleteProfilePhotoFromCloud 
 } from './services/storageService';
 import { isConfigured } from './services/firebase';
 import { generateBabyInsights } from './services/geminiService';
@@ -419,7 +419,17 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <Dashboard logs={logs} isSleeping={isSleeping} sleepStartTime={sleepStartTime} />
+            <Dashboard 
+              logs={logs} 
+              isSleeping={isSleeping} 
+              sleepStartTime={sleepStartTime}
+              onStartSleep={setSleepStatus}
+              onEndSleep={async (log) => {
+                await addLogToCloud(log);
+                await clearSleepStatus();
+              }} 
+            />
+            
             <LogForm 
               onAddLog={addLogToCloud} 
               isSleeping={isSleeping} 
