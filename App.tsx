@@ -42,7 +42,10 @@ import {
   Camera,
   X,
   Edit3,
-  CheckCircle2
+  CheckCircle2,
+  Moon,
+  Sun,
+  HelpCircle
 } from 'lucide-react';
 import { BABY_NAME, BIRTH_DATE } from './constants';
 
@@ -95,6 +98,10 @@ const App: React.FC = () => {
   
   // Toast Notification State
   const [toast, setToast] = useState<{show: boolean, msg: string}>({ show: false, msg: '' });
+
+  // Wake Up Prompt State
+  const [pendingLog, setPendingLog] = useState<BabyLog | null>(null);
+  const [showWakePrompt, setShowWakePrompt] = useState(false);
   
   // Image handling state
   const [imgError, setImgError] = useState(false);
@@ -153,6 +160,13 @@ const App: React.FC = () => {
 
   // Wrapper functions for actions that require user feedback
   const handleSaveLog = async (log: BabyLog) => {
+    // Interception Logic: If sleeping and adding Feed/Diaper
+    if (isSleeping && (log.type === LogType.FEED || log.type === LogType.DIAPER)) {
+      setPendingLog(log);
+      setShowWakePrompt(true);
+      return;
+    }
+
     await addLogToCloud(log);
     showToast("記錄已儲存！");
   };
@@ -166,6 +180,44 @@ const App: React.FC = () => {
     await addLogToCloud(log);
     await clearSleepStatus();
     showToast("睡眠記錄已儲存！☀️");
+  };
+
+  // Logic for Wake Prompt
+  const confirmWakeUp = async () => {
+    if (!pendingLog || !sleepStartTime) return;
+
+    // 1. End Sleep Session using the Pending Log's timestamp
+    const start = new Date(sleepStartTime).getTime();
+    const end = new Date(pendingLog.timestamp).getTime();
+    let duration = Math.floor((end - start) / (1000 * 60));
+    if (duration < 0) duration = 0; // Prevent negative if user backdated log too far
+
+    const sleepLog: BabyLog = {
+      id: Date.now().toString(), // Distinct ID
+      timestamp: pendingLog.timestamp, // Wake time = Feed/Diaper time
+      type: LogType.SLEEP,
+      durationMinutes: duration,
+      quality: 'GOOD' // Default
+    };
+
+    await addLogToCloud(sleepLog);
+    await clearSleepStatus();
+
+    // 2. Save the Feed/Diaper Log
+    // We need to give it a slightly different ID or just ensure it saves after
+    await addLogToCloud({ ...pendingLog, id: (Date.now() + 1).toString() });
+    
+    setShowWakePrompt(false);
+    setPendingLog(null);
+    showToast("已起床並儲存記錄！☀️");
+  };
+
+  const keepSleeping = async () => {
+    if (!pendingLog) return;
+    await addLogToCloud(pendingLog);
+    setShowWakePrompt(false);
+    setPendingLog(null);
+    showToast("已加入記錄 (繼續睡眠中) 💤");
   };
 
   const filteredLogs = useMemo(() => {
@@ -337,6 +389,41 @@ const App: React.FC = () => {
           <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-emerald-600 text-white px-6 py-3 rounded-full shadow-2xl z-[100] flex items-center gap-2 animate-fade-in-down border-2 border-white/20">
               <CheckCircle2 className="w-5 h-5 text-white" />
               <span className="font-bold text-sm">{toast.msg}</span>
+          </div>
+      )}
+
+      {/* Wake Up Prompt Modal */}
+      {showWakePrompt && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+              <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden">
+                  <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white text-center">
+                      <HelpCircle className="w-12 h-12 mx-auto mb-2 opacity-90" />
+                      <h3 className="text-xl font-black">Jacob 正在睡覺</h3>
+                      <p className="text-blue-100 text-sm mt-1">這筆記錄是否代表他已經醒了？</p>
+                  </div>
+                  <div className="p-6 space-y-3">
+                      <button 
+                          onClick={confirmWakeUp}
+                          className="w-full py-4 bg-amber-400 hover:bg-amber-500 text-amber-950 font-black rounded-2xl shadow-lg shadow-amber-100 flex items-center justify-center gap-3 transition-transform active:scale-95"
+                      >
+                          <Sun className="w-6 h-6" />
+                          是，他醒了 (自動起床)
+                      </button>
+                      <button 
+                          onClick={keepSleeping}
+                          className="w-full py-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-bold rounded-2xl flex items-center justify-center gap-3 transition-colors"
+                      >
+                          <Moon className="w-6 h-6" />
+                          否，繼續瞓 (夢中進行)
+                      </button>
+                      <button 
+                          onClick={() => {setShowWakePrompt(false); setPendingLog(null);}}
+                          className="w-full py-2 text-gray-400 text-xs font-medium hover:text-gray-600"
+                      >
+                          取消操作
+                      </button>
+                  </div>
+              </div>
           </div>
       )}
 
