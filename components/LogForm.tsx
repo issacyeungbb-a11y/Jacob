@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { LogType, FeedType, DiaperType, BabyLog, HealthLog, SleepQuality, SummaryLog } from '../types';
-import { PlusCircle, CalendarDays, Moon, ArrowRight, Play, Square, History, Weight, Ruler, Activity, Clock, Smile, Meh, Frown, ClipboardCheck, Star, Sun } from 'lucide-react';
+import { LogType, FeedType, DiaperType, BabyLog, HealthLog, SleepQuality } from '../types';
+import { PlusCircle, CalendarDays, Moon, Play, Square, History, Weight, Ruler, Activity, Clock, Smile, Meh, Frown } from 'lucide-react';
 
 interface LogFormProps {
   onAddLog: (log: BabyLog) => void;
@@ -36,12 +36,7 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
   const [quickDuration, setQuickDuration] = useState<number>(60);
   const [sleepQuality, setSleepQuality] = useState<SleepQuality>('GOOD');
 
-  // Summary Mode State
-  const [summaryRating, setSummaryRating] = useState<1|2|3|4|5>(4);
-  const [nightWakings, setNightWakings] = useState<number>(1);
-  const [summaryMood, setSummaryMood] = useState<'HAPPY' | 'NORMAL' | 'FUSSY'>('HAPPY');
-  const [approxSleepHours, setApproxSleepHours] = useState<number>(12);
-
+  // Health & Other State
   const [healthSubType, setHealthSubType] = useState<HealthSubType>('WEIGHT');
   const [healthValue, setHealthValue] = useState<string>("");
   const [otherDetails, setOtherDetails] = useState<string>("");
@@ -108,16 +103,6 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
             type: LogType.SLEEP,
             durationMinutes: quickDuration,
             quality: sleepQuality
-        };
-    } else if (activeType === LogType.SUMMARY) {
-        newLog = {
-            id,
-            timestamp: new Date(date).toISOString(),
-            type: LogType.SUMMARY,
-            rating: summaryRating,
-            nightWakings,
-            mood: summaryMood,
-            approxSleepHours
         };
     } else {
         const baseLog = {
@@ -202,7 +187,6 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
         <TabButton type={LogType.FEED} label="飲食" />
         <TabButton type={LogType.DIAPER} label="尿片" />
         <TabButton type={LogType.SLEEP} label="睡眠" />
-        <TabButton type={LogType.SUMMARY} label="總結" />
         <TabButton type={LogType.HEALTH} label="健康" />
         <TabButton type={LogType.OTHER} label="其他" />
       </div>
@@ -342,116 +326,6 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
                  </form>
              )}
           </div>
-      ) : activeType === LogType.SUMMARY ? (
-        <form onSubmit={handleSubmit} className="space-y-4">
-             <div className="flex justify-between items-end mb-2">
-                <label className="block text-sm font-medium text-gray-700 flex items-center gap-1">
-                <CalendarDays className="w-4 h-4 text-gray-400" />
-                評估日期
-                </label>
-             </div>
-             <input
-                type="datetime-local"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full p-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-amber-500 outline-none font-medium text-gray-700"
-                required
-             />
-
-             <div className="bg-amber-50 p-5 rounded-2xl border border-amber-100 space-y-5">
-                 {/* Rating */}
-                 <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1">
-                        <Star className="w-4 h-4 text-amber-500 fill-current" />
-                        整體評分 (1-5星)
-                    </label>
-                    <div className="flex gap-2 justify-between">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                            <button
-                                key={star}
-                                type="button"
-                                onClick={() => setSummaryRating(star as any)}
-                                className={`w-10 h-10 rounded-full flex items-center justify-center text-lg transition-all ${summaryRating >= star ? 'bg-amber-400 text-white shadow-md scale-110' : 'bg-white text-gray-300'}`}
-                            >
-                                ★
-                            </button>
-                        ))}
-                    </div>
-                 </div>
-
-                 {/* Night Wakings */}
-                 <div>
-                     <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1">
-                        <Moon className="w-4 h-4 text-indigo-500" />
-                        夜醒次數
-                     </label>
-                     <div className="flex items-center gap-4 bg-white p-2 rounded-xl border border-amber-200">
-                         <button type="button" onClick={() => setNightWakings(Math.max(0, nightWakings - 1))} className="w-10 h-10 bg-amber-100 text-amber-700 rounded-lg font-bold text-xl">-</button>
-                         <span className="flex-1 text-center font-black text-2xl text-gray-700">{nightWakings} 次</span>
-                         <button type="button" onClick={() => setNightWakings(nightWakings + 1)} className="w-10 h-10 bg-amber-100 text-amber-700 rounded-lg font-bold text-xl">+</button>
-                     </div>
-                 </div>
-
-                 {/* Mood */}
-                 <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1">
-                        <Sun className="w-4 h-4 text-orange-500" />
-                        日間情緒
-                    </label>
-                    <div className="flex gap-2">
-                        <button
-                            type="button"
-                            onClick={() => setSummaryMood('HAPPY')}
-                            className={`flex-1 py-2 rounded-xl flex flex-col items-center gap-1 transition-all border-2 ${summaryMood === 'HAPPY' ? 'border-orange-400 bg-white shadow-sm' : 'border-transparent bg-white/50 text-gray-400'}`}
-                        >
-                            <Smile className={`w-8 h-8 ${summaryMood === 'HAPPY' ? 'text-orange-500' : 'text-gray-300'}`} />
-                            <span className="text-xs font-bold">開心</span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setSummaryMood('NORMAL')}
-                            className={`flex-1 py-2 rounded-xl flex flex-col items-center gap-1 transition-all border-2 ${summaryMood === 'NORMAL' ? 'border-orange-400 bg-white shadow-sm' : 'border-transparent bg-white/50 text-gray-400'}`}
-                        >
-                            <Meh className={`w-8 h-8 ${summaryMood === 'NORMAL' ? 'text-orange-500' : 'text-gray-300'}`} />
-                            <span className="text-xs font-bold">普通</span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setSummaryMood('FUSSY')}
-                            className={`flex-1 py-2 rounded-xl flex flex-col items-center gap-1 transition-all border-2 ${summaryMood === 'FUSSY' ? 'border-orange-400 bg-white shadow-sm' : 'border-transparent bg-white/50 text-gray-400'}`}
-                        >
-                            <Frown className={`w-8 h-8 ${summaryMood === 'FUSSY' ? 'text-orange-500' : 'text-gray-300'}`} />
-                            <span className="text-xs font-bold">煩躁</span>
-                        </button>
-                    </div>
-                 </div>
-
-                 {/* Approx Hours */}
-                 <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
-                        估計總時數 (約)
-                    </label>
-                    <div className="flex items-center gap-3">
-                         <input 
-                            type="range" 
-                            min="0" max="24" step="0.5"
-                            value={approxSleepHours}
-                            onChange={(e) => setApproxSleepHours(parseFloat(e.target.value))}
-                            className="w-full h-2 bg-amber-200 rounded-lg appearance-none cursor-pointer"
-                         />
-                         <span className="font-black text-amber-700 w-16 text-right">{approxSleepHours} h</span>
-                    </div>
-                 </div>
-             </div>
-
-             <button
-                type="submit"
-                className="w-full mt-4 py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl shadow-md transition-colors flex items-center justify-center gap-2"
-            >
-                <ClipboardCheck className="w-5 h-5" />
-                儲存今日總結
-            </button>
-        </form>
       ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

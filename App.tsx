@@ -41,7 +41,8 @@ import {
   RefreshCw,
   Camera,
   X,
-  Edit3
+  Edit3,
+  CheckCircle2
 } from 'lucide-react';
 import { BABY_NAME, BIRTH_DATE } from './constants';
 
@@ -92,6 +93,9 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
+  // Toast Notification State
+  const [toast, setToast] = useState<{show: boolean, msg: string}>({ show: false, msg: '' });
+  
   // Image handling state
   const [imgError, setImgError] = useState(false);
   const [imgTimestamp, setImgTimestamp] = useState(Date.now()); 
@@ -139,6 +143,30 @@ const App: React.FC = () => {
       clearTimeout(timeout);
     };
   }, []);
+
+  const showToast = (msg: string) => {
+    setToast({ show: true, msg });
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, show: false }));
+    }, 2500);
+  };
+
+  // Wrapper functions for actions that require user feedback
+  const handleSaveLog = async (log: BabyLog) => {
+    await addLogToCloud(log);
+    showToast("記錄已儲存！");
+  };
+
+  const handleStartSleep = async (startTime: string) => {
+    await setSleepStatus(startTime);
+    showToast("早抖 Jacob！💤");
+  };
+
+  const handleEndSleep = async (log: BabyLog) => {
+    await addLogToCloud(log);
+    await clearSleepStatus();
+    showToast("睡眠記錄已儲存！☀️");
+  };
 
   const filteredLogs = useMemo(() => {
     return logs.filter(l => {
@@ -303,7 +331,15 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24">
+    <div className="min-h-screen bg-slate-50 pb-24 relative">
+      {/* Toast Notification */}
+      {toast.show && (
+          <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-emerald-600 text-white px-6 py-3 rounded-full shadow-2xl z-[100] flex items-center gap-2 animate-fade-in-down border-2 border-white/20">
+              <CheckCircle2 className="w-5 h-5 text-white" />
+              <span className="font-bold text-sm">{toast.msg}</span>
+          </div>
+      )}
+
       {/* Header */}
       <header className="bg-white px-6 pt-6 pb-4 shadow-sm sticky top-0 z-50">
         <div className="flex items-center justify-between mb-2">
@@ -423,22 +459,16 @@ const App: React.FC = () => {
               logs={logs} 
               isSleeping={isSleeping} 
               sleepStartTime={sleepStartTime}
-              onStartSleep={setSleepStatus}
-              onEndSleep={async (log) => {
-                await addLogToCloud(log);
-                await clearSleepStatus();
-              }} 
+              onStartSleep={handleStartSleep}
+              onEndSleep={handleEndSleep} 
             />
             
             <LogForm 
-              onAddLog={addLogToCloud} 
+              onAddLog={handleSaveLog} 
               isSleeping={isSleeping} 
               sleepStartTime={sleepStartTime}
-              onStartSleep={setSleepStatus}
-              onEndSleep={async (log) => {
-                await addLogToCloud(log);
-                await clearSleepStatus();
-              }}
+              onStartSleep={handleStartSleep}
+              onEndSleep={handleEndSleep}
               lastFeedTime={lastFeedTime}
             />
           </>
