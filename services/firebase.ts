@@ -1,6 +1,6 @@
 
-import firebase from "firebase/compat/app";
-import "firebase/compat/firestore";
+import { initializeApp } from "firebase/app";
+import { getFirestore } from "firebase/firestore";
 
 // 已填入您的 Jacob 專案金鑰
 const firebaseConfig = {
@@ -14,9 +14,8 @@ const firebaseConfig = {
 };
 
 // 檢查是否已經設定正確的 Project ID
-// 由於您已經提供了正確的 projectId ("jacob-3ac2a")，這裡現在會回傳 true
 export const isConfigured = firebaseConfig.projectId !== "your-project-id";
 
-// Initialize Firebase with compat API
-const app = firebase.initializeApp(firebaseConfig);
-export const db = app.firestore();
+// Initialize Firebase with Modular SDK
+const app = initializeApp(firebaseConfig);
+export const db = getFirestore(app);
