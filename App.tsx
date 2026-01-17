@@ -161,10 +161,17 @@ const App: React.FC = () => {
   // Wrapper functions for actions that require user feedback
   const handleSaveLog = async (log: BabyLog) => {
     // Interception Logic: If sleeping and adding Feed/Diaper
-    if (isSleeping && (log.type === LogType.FEED || log.type === LogType.DIAPER)) {
-      setPendingLog(log);
-      setShowWakePrompt(true);
-      return;
+    if (isSleeping && sleepStartTime && (log.type === LogType.FEED || log.type === LogType.DIAPER)) {
+      const logTime = new Date(log.timestamp).getTime();
+      const sleepStart = new Date(sleepStartTime).getTime();
+
+      // 只在「記錄時間」>=「開始睡覺時間」時才詢問
+      // 如果記錄時間比睡覺時間早（補登睡前的事），則不打擾睡眠狀態，直接儲存
+      if (logTime >= sleepStart) {
+        setPendingLog(log);
+        setShowWakePrompt(true);
+        return;
+      }
     }
 
     await addLogToCloud(log);
