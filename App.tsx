@@ -549,13 +549,7 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <Dashboard 
-              logs={logs} 
-              isSleeping={isSleeping} 
-              sleepStartTime={sleepStartTime}
-              onStartSleep={handleStartSleep}
-              onEndSleep={handleEndSleep} 
-            />
+            <Dashboard logs={logs} />
             
             <LogForm 
               onAddLog={handleSaveLog} 
