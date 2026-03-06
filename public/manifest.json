@@ -1,0 +1,20 @@
+{
+  "short_name": "Jacob日記",
+  "name": "Jacob 成長日記",
+  "icons": [
+    {
+      "src": "jacob.jpg",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "jacob.jpg",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#ffffff",
+  "background_color": "#f0f9ff"
+}
