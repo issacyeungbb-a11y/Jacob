@@ -237,7 +237,7 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
 
 
   // --- BAR CHART HELPERS ---
-  const maxValue = Math.max(...chartData.map(d => d.value), 1);
+  const maxValue = useMemo(() => chartData.reduce((max, d) => Math.max(max, d.value), 1), [chartData]);
   const chartHeight = 160;
   const getBarHeight = (val: number) => (val / maxValue) * chartHeight;
 
@@ -285,10 +285,10 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
   );
 
   const getBarWidthClass = () => {
-    if (daysRange === 7) return 'max-w-[24px]';
-    if (daysRange === 14) return 'max-w-[12px]';
-    if (daysRange === 30) return 'max-w-[6px]';
-    return 'max-w-[4px]';
+    if (daysRange === 7) return 'w-6';
+    if (daysRange === 14) return 'w-4';
+    if (daysRange === 30) return 'w-2';
+    return 'w-1.5';
   };
 
   const shouldShowLabel = (index: number) => {
@@ -357,53 +357,65 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
                 </div>
             </div>
 
-            <div className="relative h-[200px] w-full flex items-end justify-between gap-1 px-1">
-                {/* Background Grid Lines */}
-                <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-10 pb-[20px]">
-                    <div className="border-t border-gray-400 w-full h-0 relative"><span className="absolute -top-3 left-0 text-[9px] text-gray-500">{maxValue}</span></div>
-                    <div className="border-t border-gray-400 w-full h-0"></div>
-                    <div className="border-t border-gray-400 w-full h-0 relative"><span className="absolute -top-3 left-0 text-[9px] text-gray-500">{Math.round(maxValue / 2)}</span></div>
-                    <div className="border-t border-gray-400 w-full h-0"></div>
-                    <div className="border-t border-gray-400 w-full h-0 relative"><span className="absolute -top-3 left-0 text-[9px] text-gray-500">0</span></div>
+            <div className="flex relative h-[200px] border border-gray-50 rounded-xl overflow-hidden bg-slate-50/30">
+                {/* Y-Axis Labels (Fixed Left) */}
+                <div className="w-10 flex-shrink-0 flex flex-col justify-between text-[9px] text-gray-400 font-medium py-2 bg-white border-r border-gray-100 z-20 items-center select-none shadow-sm pb-[25px]">
+                    <span>{maxValue}</span>
+                    <span>{Math.round(maxValue * 0.75)}</span>
+                    <span>{Math.round(maxValue / 2)}</span>
+                    <span>{Math.round(maxValue * 0.25)}</span>
+                    <span>0</span>
                 </div>
 
-                {chartData.map((d, i) => (
-                <div key={i} className="flex flex-col items-center flex-1 z-10 group h-full justify-end">
-                    <div className="h-4 mb-1 relative w-full flex justify-center">
-                        <span className={`absolute bottom-0 text-[9px] font-bold transition-opacity whitespace-nowrap bg-white/80 px-1 rounded shadow-sm z-20 ${
-                            d.value === maxValue && daysRange === 7 
-                            ? `${getColor().split(' ')[0]}` 
-                            : 'text-gray-600 opacity-0 group-hover:opacity-100'
-                        }`}>
-                        {d.value}
-                        </span>
-                    </div>
-                    
-                    <div 
-                        className={`w-full rounded-t-sm transition-all duration-500 ease-out ${getBarWidthClass()} ${
-                        d.value === maxValue ? getColor().split(' ')[1] : 'bg-gray-200 group-hover:bg-gray-300'
-                        }`}
-                        style={{ height: `${Math.max(getBarHeight(d.value), 2)}px` }}
-                    ></div>
-                    
-                    <div className="h-5 mt-1 flex items-start justify-center w-full">
-                        {shouldShowLabel(i) && (
-                        <span className={`text-[9px] whitespace-nowrap transform ${daysRange !== 7 ? 'scale-90' : ''} ${
-                            new Date().getDate() === new Date(d.date).getDate() ? 'text-gray-800 font-bold' : 'text-gray-400'
-                        }`}>
-                            {d.displayDate}
-                        </span>
-                        )}
+                {/* Scrollable Bar Area */}
+                <div className="flex-1 overflow-x-auto no-scrollbar relative touch-pan-x">
+                    <div className="h-full flex items-end min-w-full px-2 pb-6" style={{ width: `${Math.max(100, chartData.length * (daysRange === 30 ? 4 : (daysRange === 'ALL' ? 2 : 14)))}%` }}>
+                        {/* Horizontal Grid Lines */}
+                        <div className="absolute inset-0 flex flex-col justify-between pointer-events-none z-0 py-2 pb-[25px]">
+                             <div className="border-t border-gray-200 w-full h-0 dashed opacity-30"></div>
+                             <div className="border-t border-gray-200 w-full h-0 dashed opacity-30"></div>
+                             <div className="border-t border-gray-200 w-full h-0 dashed opacity-30"></div>
+                             <div className="border-t border-gray-200 w-full h-0 dashed opacity-30"></div>
+                             <div className="border-t border-gray-200 w-full h-0 dashed opacity-30"></div>
+                        </div>
+
+                        {chartData.map((d, i) => (
+                        <div key={i} className="flex flex-col items-center flex-1 z-10 group h-full justify-end relative">
+                            <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-30">
+                                <span className="text-[9px] font-bold bg-gray-800 text-white px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">
+                                    {d.value}{getUnit()}
+                                </span>
+                            </div>
+                            
+                            <div 
+                                className={`rounded-t-sm transition-all duration-500 ease-out ${getBarWidthClass()} ${
+                                d.value === maxValue ? getColor().split(' ')[1] : 'bg-gray-300 group-hover:bg-gray-400'
+                                }`}
+                                style={{ height: `${Math.max(getBarHeight(d.value), 2)}px` }}
+                            ></div>
+                            
+                            <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 w-full flex justify-center">
+                                {shouldShowLabel(i) && (
+                                <span className={`text-[9px] whitespace-nowrap transform ${daysRange !== 7 ? 'scale-90' : ''} ${
+                                    new Date().getDate() === new Date(d.date).getDate() ? 'text-gray-800 font-bold' : 'text-gray-400'
+                                }`}>
+                                    {d.displayDate}
+                                </span>
+                                )}
+                            </div>
+                        </div>
+                        ))}
                     </div>
                 </div>
-                ))}
             </div>
             
-            <div className="mt-2 text-center bg-gray-50 rounded-lg py-2">
-                <p className="text-xs text-gray-500">
-                {daysRange === 'ALL' ? '全部' : daysRange}日平均: <span className="font-bold text-gray-700 text-sm">
-                    {Math.round(chartData.reduce((a, b) => a + b.value, 0) / chartDates.length)} {getUnit()}
-                </span>
+            <div className="mt-4 text-center bg-gray-50 rounded-xl py-2.5 border border-gray-100">
+                <p className="text-xs text-gray-500 flex items-center justify-center gap-2">
+                    <Info className="w-3.5 h-3.5 text-gray-400" />
+                    {daysRange === 'ALL' ? '全部' : daysRange}日平均: 
+                    <span className="font-bold text-gray-800 text-sm">
+                        {Math.round(chartData.reduce((a, b) => a + b.value, 0) / chartDates.length)} {getUnit()}
+                    </span>
                 </p>
             </div>
         </div>
