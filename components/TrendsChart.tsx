@@ -8,7 +8,7 @@ interface TrendsChartProps {
 }
 
 type ChartMode = 'MILK' | 'SLEEP' | 'DIAPER';
-type TimeRange = 7 | 14 | 30;
+type TimeRange = 7 | 14 | 30 | 'ALL';
 type PatternKey = 'FEED' | 'WET' | 'DIRTY' | 'BATH';
 
 interface PointData {
@@ -56,13 +56,32 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
 
   // Helper: Generate last N days dates (YYYY-MM-DD)
   const chartDates = useMemo(() => {
-    return Array.from({ length: daysRange }, (_, i) => {
+    let totalDays = daysRange as number;
+    
+    if (daysRange === 'ALL') {
+      if (logs.length === 0) {
+        totalDays = 7;
+      } else {
+        const earliestTime = Math.min(...logs.map(l => new Date(l.timestamp).getTime()));
+        const earliestDate = new Date(earliestTime);
+        const today = new Date();
+        
+        earliestDate.setHours(0, 0, 0, 0);
+        today.setHours(0, 0, 0, 0);
+        
+        const diffTime = Math.abs(today.getTime() - earliestDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        totalDays = Math.max(diffDays, 7);
+      }
+    }
+
+    return Array.from({ length: totalDays }, (_, i) => {
       const d = new Date();
-      d.setDate(d.getDate() - ((daysRange - 1) - i)); // Order from past to today
+      d.setDate(d.getDate() - ((totalDays - 1) - i)); // Order from past to today
       const offset = d.getTimezoneOffset() * 60000;
       return new Date(d.getTime() - offset).toISOString().split('T')[0];
     });
-  }, [daysRange]);
+  }, [daysRange, logs]);
 
   // Helper: Get global sorted logs for interval calculation
   const sortedGlobalLogs = useMemo(() => {
@@ -268,13 +287,18 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
   const getBarWidthClass = () => {
     if (daysRange === 7) return 'max-w-[24px]';
     if (daysRange === 14) return 'max-w-[12px]';
-    return 'max-w-[6px]';
+    if (daysRange === 30) return 'max-w-[6px]';
+    return 'max-w-[4px]';
   };
 
   const shouldShowLabel = (index: number) => {
     if (daysRange === 7) return true;
     if (daysRange === 14) return index % 2 === 0;
-    return index % 5 === 0;
+    if (daysRange === 30) return index % 5 === 0;
+    
+    const total = chartDates.length;
+    const step = Math.max(1, Math.floor(total / 6));
+    return index % step === 0 || index === total - 1;
   };
 
   // Legend Button Component
@@ -322,6 +346,7 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
                         <RangeButton range={7} label="7天" />
                         <RangeButton range={14} label="14天" />
                         <RangeButton range={30} label="30天" />
+                        <RangeButton range={'ALL'} label="全部" />
                     </div>
                 </div>
                 
@@ -363,7 +388,7 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
                     
                     <div className="h-5 mt-1 flex items-start justify-center w-full">
                         {shouldShowLabel(i) && (
-                        <span className={`text-[9px] whitespace-nowrap transform ${daysRange > 7 ? 'scale-90' : ''} ${
+                        <span className={`text-[9px] whitespace-nowrap transform ${daysRange !== 7 ? 'scale-90' : ''} ${
                             new Date().getDate() === new Date(d.date).getDate() ? 'text-gray-800 font-bold' : 'text-gray-400'
                         }`}>
                             {d.displayDate}
@@ -376,8 +401,8 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
             
             <div className="mt-2 text-center bg-gray-50 rounded-lg py-2">
                 <p className="text-xs text-gray-500">
-                {daysRange}日平均: <span className="font-bold text-gray-700 text-sm">
-                    {Math.round(chartData.reduce((a, b) => a + b.value, 0) / daysRange)} {getUnit()}
+                {daysRange === 'ALL' ? '全部' : daysRange}日平均: <span className="font-bold text-gray-700 text-sm">
+                    {Math.round(chartData.reduce((a, b) => a + b.value, 0) / chartDates.length)} {getUnit()}
                 </span>
                 </p>
             </div>
@@ -417,7 +442,7 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
 
                  {/* Scrollable Chart Area */}
                  <div className="flex-1 overflow-x-auto no-scrollbar relative touch-pan-x">
-                    <div className="h-full flex min-w-full" style={{ width: `${Math.max(100, patternData.length * (daysRange === 30 ? 6 : 14))}%` }}>
+                    <div className="h-full flex min-w-full" style={{ width: `${Math.max(100, patternData.length * (daysRange === 30 ? 6 : (daysRange === 'ALL' ? 3 : 14)))}%` }}>
                         
                         {/* Horizontal Grid Lines */}
                         <div className="absolute inset-0 flex flex-col justify-between pointer-events-none z-0 py-2">
