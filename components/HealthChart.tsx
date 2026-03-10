@@ -100,12 +100,22 @@ export const HealthChart: React.FC<HealthChartProps> = ({ logs }) => {
                     const y = getY(d.value);
                     const xPct = getX(i);
                     return (
-                        <g key={d.id}>
-                            <circle cx={`${xPct}%`} cy={y} r="4" fill="white" stroke="#10b981" strokeWidth="2" />
-                            <text x={`${xPct}%`} y={y - 12} textAnchor="middle" fill="#047857" fontSize="11" fontWeight="bold">
-                                {d.value}
-                            </text>
-                            <text x={`${xPct}%`} y={215} textAnchor="middle" fill="#9ca3af" fontSize="10">
+                        <g key={d.id} className="group/point">
+                            {/* Invisible larger hit area for hover */}
+                            <circle cx={`${xPct}%`} cy={y} r="15" fill="transparent" className="cursor-pointer" />
+                            
+                            <circle cx={`${xPct}%`} cy={y} r="4" fill="white" stroke="#10b981" strokeWidth="2" className="transition-all group-hover/point:r-6 group-hover/point:stroke-emerald-600" />
+                            
+                            {/* Tooltip-like text */}
+                            <g className="opacity-0 group-hover/point:opacity-100 transition-opacity pointer-events-none">
+                                <rect x={`${xPct}%`} y={y - 32} width="40" height="20" rx="4" fill="#065f46" transform="translate(-20, 0)" />
+                                <text x={`${xPct}%`} y={y - 18} textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">
+                                    {d.value}{metric === 'WEIGHT' ? 'kg' : 'cm'}
+                                </text>
+                                <path d={`M ${xPct}% ${y-12} L ${xPct-4}% ${y-16} L ${xPct+4}% ${y-16} Z`} fill="#065f46" />
+                            </g>
+
+                            <text x={`${xPct}%`} y={215} textAnchor="middle" fill="#9ca3af" fontSize="10" className="group-hover/point:fill-emerald-600 group-hover/point:font-bold">
                                 {d.date.toLocaleDateString('zh-TW', {month:'numeric', day:'numeric'})}
                             </text>
                         </g>

@@ -381,10 +381,15 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
 
                         {chartData.map((d, i) => (
                         <div key={i} className="flex flex-col items-center flex-1 z-10 group h-full justify-end relative">
-                            <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-30">
-                                <span className="text-[9px] font-bold bg-gray-800 text-white px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">
-                                    {d.value}{getUnit()}
-                                </span>
+                            {/* Tooltip */}
+                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 z-30 pointer-events-none mb-1">
+                                <div className="relative">
+                                    <div className="bg-gray-900 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg whitespace-nowrap">
+                                        {d.value} {getUnit()}
+                                    </div>
+                                    {/* Triangle */}
+                                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
+                                </div>
                             </div>
                             
                             <div 
