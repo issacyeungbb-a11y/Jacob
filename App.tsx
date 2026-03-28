@@ -20,7 +20,8 @@ import { LogForm } from './components/LogForm';
 import { LogList } from './components/LogList';
 import { TrendsChart } from './components/TrendsChart';
 import { HealthChart } from './components/HealthChart';
-import { DevelopmentBoard } from './components/DevelopmentBoard';
+import { VaccineTracker } from './components/VaccineTracker';
+import { MilestoneTracker } from './components/MilestoneTracker';
 import { 
   Sparkles, 
   Download, 
@@ -46,11 +47,13 @@ import {
   CheckCircle2,
   Moon,
   Sun,
-  HelpCircle
+  HelpCircle,
+  HeartPulse,
+  Flag
 } from 'lucide-react';
 import { BABY_NAME, BIRTH_DATE } from './constants';
 
-type AppView = 'HOME' | 'HISTORY' | 'TRENDS' | 'AI';
+type AppView = 'HOME' | 'HISTORY' | 'ROUTINE' | 'MILESTONES' | 'AI' | 'HEALTH';
 
 const App: React.FC = () => {
   if (!isConfigured) {
@@ -589,11 +592,22 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {activeView === 'TRENDS' && (
+        {activeView === 'ROUTINE' && (
           <div className="space-y-6">
             <TrendsChart logs={logs} />
+          </div>
+        )}
+
+        {activeView === 'HEALTH' && (
+          <div className="space-y-6">
             <HealthChart logs={logs} />
-            <DevelopmentBoard logs={logs} />
+            <VaccineTracker logs={logs} />
+          </div>
+        )}
+
+        {activeView === 'MILESTONES' && (
+          <div className="space-y-6">
+            <MilestoneTracker logs={logs} />
           </div>
         )}
 
@@ -647,19 +661,23 @@ const App: React.FC = () => {
       </main>
 
       {/* Nav Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t border-gray-100 px-4 py-2 flex justify-between items-center z-50">
-        <NavButton view="HOME" icon={LayoutDashboard} label="儀表板" />
-        <NavButton view="HISTORY" icon={History} label="紀錄" />
-        <div className="flex flex-col items-center -mt-8">
-           <button 
-             onClick={() => setActiveView('HOME')}
-             className="w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-blue-200 border-4 border-white transform hover:scale-105 active:scale-95 transition-all"
-           >
-             <Plus className="w-8 h-8" />
-           </button>
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t border-gray-100 px-2 py-2 flex justify-between items-center z-50 overflow-x-auto no-scrollbar">
+        <div className="flex items-center justify-between w-full min-w-[420px]">
+          <NavButton view="HOME" icon={LayoutDashboard} label="儀表板" />
+          <NavButton view="HISTORY" icon={History} label="紀錄" />
+          <NavButton view="ROUTINE" icon={BarChart2} label="作息紀錄" />
+          <div className="flex flex-col items-center -mt-8 px-2">
+             <button 
+               onClick={() => setActiveView('HOME')}
+               className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-blue-200 border-4 border-white transform hover:scale-105 active:scale-95 transition-all"
+             >
+               <Plus className="w-7 h-7" />
+             </button>
+          </div>
+          <NavButton view="AI" icon={BrainCircuit} label="AI 分析" />
+          <NavButton view="MILESTONES" icon={Flag} label="里程碑" />
+          <NavButton view="HEALTH" icon={HeartPulse} label="健康紀錄" />
         </div>
-        <NavButton view="TRENDS" icon={BarChart2} label="趨勢" />
-        <NavButton view="AI" icon={BrainCircuit} label="AI 分析" />
       </nav>
     </div>
   );
