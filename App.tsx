@@ -20,6 +20,7 @@ import { LogForm } from './components/LogForm';
 import { LogList } from './components/LogList';
 import { TrendsChart } from './components/TrendsChart';
 import { HealthChart } from './components/HealthChart';
+import { DevelopmentBoard } from './components/DevelopmentBoard';
 import { 
   Sparkles, 
   Download, 
@@ -592,6 +593,7 @@ const App: React.FC = () => {
           <div className="space-y-6">
             <TrendsChart logs={logs} />
             <HealthChart logs={logs} />
+            <DevelopmentBoard logs={logs} />
           </div>
         )}
 

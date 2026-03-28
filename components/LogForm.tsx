@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { LogType, FeedType, DiaperType, BabyLog, HealthLog, SleepQuality } from '../types';
-import { PlusCircle, CalendarDays, Moon, Play, Square, History, Weight, Ruler, Activity, Clock, Smile, Meh, Frown } from 'lucide-react';
+import { LogType, FeedType, DiaperType, BabyLog, HealthLog, SleepQuality, TummyTimeLog, VaccineLog, MilestoneLog } from '../types';
+import { PlusCircle, CalendarDays, Moon, Play, Square, History, Weight, Ruler, Activity, Clock, Smile, Meh, Frown, Timer, Syringe, Flag } from 'lucide-react';
+import { HK_VACCINES, MILESTONES } from '../constants';
 
 interface LogFormProps {
   onAddLog: (log: BabyLog) => void;
@@ -40,6 +41,9 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
   const [healthSubType, setHealthSubType] = useState<HealthSubType>('WEIGHT');
   const [healthValue, setHealthValue] = useState<string>("");
   const [otherDetails, setOtherDetails] = useState<string>("");
+  const [tummyDuration, setTummyDuration] = useState<number>(5);
+  const [vaccineId, setVaccineId] = useState<string>(HK_VACCINES[0].id);
+  const [milestoneId, setMilestoneId] = useState<string>(MILESTONES[0].id);
   const [date, setDate] = useState<string>(toLocalISO(new Date()));
 
   const timeSinceLastFeed = useMemo(() => {
@@ -132,6 +136,15 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
             case LogType.OTHER:
                 newLog = { ...baseLog, type: LogType.OTHER, details: otherDetails } as any;
                 break;
+            case LogType.TUMMY_TIME:
+                newLog = { ...baseLog, type: LogType.TUMMY_TIME, durationMinutes: tummyDuration } as TummyTimeLog;
+                break;
+            case LogType.VACCINE:
+                newLog = { ...baseLog, type: LogType.VACCINE, vaccineId } as VaccineLog;
+                break;
+            case LogType.MILESTONE:
+                newLog = { ...baseLog, type: LogType.MILESTONE, milestoneId } as MilestoneLog;
+                break;
             default:
                 return;
         }
@@ -188,6 +201,9 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
         <TabButton type={LogType.DIAPER} label="尿片" />
         <TabButton type={LogType.SLEEP} label="睡眠" />
         <TabButton type={LogType.HEALTH} label="健康" />
+        <TabButton type={LogType.TUMMY_TIME} label="趴地" />
+        <TabButton type={LogType.VACCINE} label="疫苗" />
+        <TabButton type={LogType.MILESTONE} label="里程碑" />
         <TabButton type={LogType.OTHER} label="其他" />
       </div>
 
@@ -468,6 +484,55 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
                 className="w-full p-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-pink-500 outline-none text-gray-700"
                 required
                 />
+            </div>
+            )}
+
+            {activeType === LogType.TUMMY_TIME && (
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                    <Timer className="w-4 h-4 text-orange-500" /> 趴地訓練時間 (分鐘)
+                </label>
+                <input
+                    type="number"
+                    value={tummyDuration}
+                    onChange={(e) => setTummyDuration(Number(e.target.value))}
+                    className="w-full p-3 rounded-xl bg-orange-50 border border-orange-200 focus:ring-2 focus:ring-orange-500 outline-none text-orange-800 text-center font-bold text-xl"
+                    placeholder="5"
+                />
+            </div>
+            )}
+
+            {activeType === LogType.VACCINE && (
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                    <Syringe className="w-4 h-4 text-teal-500" /> 接種疫苗
+                </label>
+                <select
+                    value={vaccineId}
+                    onChange={(e) => setVaccineId(e.target.value)}
+                    className="w-full p-3 rounded-xl bg-teal-50 border border-teal-200 focus:ring-2 focus:ring-teal-500 outline-none text-teal-800 font-medium"
+                >
+                    {HK_VACCINES.map(v => (
+                        <option key={v.id} value={v.id}>{v.month}個月: {v.name}</option>
+                    ))}
+                </select>
+            </div>
+            )}
+
+            {activeType === LogType.MILESTONE && (
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                    <Flag className="w-4 h-4 text-purple-500" /> 發展里程碑
+                </label>
+                <select
+                    value={milestoneId}
+                    onChange={(e) => setMilestoneId(e.target.value)}
+                    className="w-full p-3 rounded-xl bg-purple-50 border border-purple-200 focus:ring-2 focus:ring-purple-500 outline-none text-purple-800 font-medium"
+                >
+                    {MILESTONES.map(m => (
+                        <option key={m.id} value={m.id}>[{m.category}] {m.name}</option>
+                    ))}
+                </select>
             </div>
             )}
 

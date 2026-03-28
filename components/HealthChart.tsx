@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { BabyLog, LogType, HealthLog } from '../types';
 import { Activity, Weight, Ruler, Info } from 'lucide-react';
+import { WHO_BOYS_MEDIAN, BIRTH_DATE } from '../constants';
 
 interface HealthChartProps {
   logs: BabyLog[];
@@ -14,6 +15,18 @@ export const HealthChart: React.FC<HealthChartProps> = ({ logs }) => {
 
   const data = useMemo(() => {
     const healthLogs = logs.filter(l => l.type === LogType.HEALTH) as HealthLog[];
+    
+    const getWHOMedian = (m: HealthMetric, ageMonths: number) => {
+        const arr = WHO_BOYS_MEDIAN[m];
+        if (ageMonths <= 0) return arr[0];
+        if (ageMonths >= arr.length - 1) return arr[arr.length - 1];
+        const lower = Math.floor(ageMonths);
+        const upper = Math.ceil(ageMonths);
+        if (lower === upper) return arr[lower];
+        const fraction = ageMonths - lower;
+        return arr[lower] + (arr[upper] - arr[lower]) * fraction;
+    };
+
     const points = healthLogs
       .map(l => {
         let value = 0;
@@ -21,9 +34,15 @@ export const HealthChart: React.FC<HealthChartProps> = ({ logs }) => {
         if (metric === 'HEIGHT') value = l.heightCm || 0;
         if (metric === 'HEAD') value = l.headCircumferenceCm || 0;
         
+        const logDate = new Date(l.timestamp);
+        const birth = new Date(BIRTH_DATE);
+        const ageInMonths = (logDate.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 30.4375);
+        const whoMedian = getWHOMedian(metric, ageInMonths);
+
         return {
-            date: new Date(l.timestamp),
+            date: logDate,
             value: value,
+            whoMedian: whoMedian,
             id: l.id
         };
       })
@@ -60,8 +79,8 @@ export const HealthChart: React.FC<HealthChartProps> = ({ logs }) => {
         );
     }
 
-    const minVal = Math.min(...data.map(d => d.value)) * 0.98;
-    const maxVal = Math.max(...data.map(d => d.value)) * 1.02;
+    const minVal = Math.min(...data.map(d => Math.min(d.value, d.whoMedian))) * 0.98;
+    const maxVal = Math.max(...data.map(d => Math.max(d.value, d.whoMedian))) * 1.02;
     const range = Math.max(maxVal - minVal, 0.1);
 
     const getY = (val: number) => {
@@ -78,14 +97,41 @@ export const HealthChart: React.FC<HealthChartProps> = ({ logs }) => {
         return `${i === 0 ? 'M' : 'L'} ${x}% ${y}`;
     }).join(' ');
 
+    const whoPathD = data.map((d, i) => {
+        const x = getX(i);
+        const y = getY(d.whoMedian);
+        return `${i === 0 ? 'M' : 'L'} ${x}% ${y}`;
+    }).join(' ');
+
     return (
         <div className="relative h-[220px] w-full mt-4 select-none">
+            <div className="flex items-center justify-end gap-4 text-[10px] text-gray-500 mb-2 absolute right-0 -top-6">
+                <div className="flex items-center gap-1">
+                    <div className="w-3 h-0.5 bg-emerald-500 rounded-full"></div>
+                    <span>Jacob</span>
+                </div>
+                <div className="flex items-center gap-1">
+                    <div className="w-3 h-0.5 border-t-2 border-dashed border-gray-400"></div>
+                    <span>WHO 標準 (50%)</span>
+                </div>
+            </div>
+
             <div className="absolute left-0 top-0 bottom-6 w-full pointer-events-none opacity-20">
                 <div className="border-t border-emerald-500 w-full absolute" style={{ top: padding }}></div>
                 <div className="border-t border-emerald-500 w-full absolute" style={{ bottom: padding }}></div>
             </div>
 
             <svg className="w-full h-[200px] overflow-visible">
+                <path 
+                    d={whoPathD} 
+                    fill="none" 
+                    stroke="#9ca3af" 
+                    strokeWidth="2" 
+                    strokeDasharray="4 4"
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                    className="opacity-50"
+                />
                 <path 
                     d={pathD} 
                     fill="none" 
@@ -135,10 +181,15 @@ export const HealthChart: React.FC<HealthChartProps> = ({ logs }) => {
   return (
     <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 mt-6">
        <div className="flex flex-col gap-4">
-          <h3 className="font-bold text-gray-800 flex items-center gap-2">
-              <Activity className="w-5 h-5 text-emerald-500" />
-              生長曲線
-          </h3>
+          <div className="flex justify-between items-start">
+            <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                <Activity className="w-5 h-5 text-emerald-500" />
+                生長曲線
+            </h3>
+            <span className="text-[9px] text-gray-400 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
+              資料來源: 世界衛生組織 (WHO)
+            </span>
+          </div>
           
           <div className="flex gap-2 bg-gray-50 p-1 rounded-xl w-fit">
              <button

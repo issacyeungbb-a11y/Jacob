@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { BabyLog, LogType, FeedLog, DiaperLog, SleepLog, HealthLog, OtherLog, SummaryLog } from '../types';
-import { Milk, Baby, Moon, Activity, Trash2, StickyNote, Sunrise, Sun, Sunset, MoonStar, Clock, AlertTriangle, Smile, Meh, Frown, ClipboardCheck, Star } from 'lucide-react';
+import { BabyLog, LogType, FeedLog, DiaperLog, SleepLog, HealthLog, OtherLog, SummaryLog, TummyTimeLog, VaccineLog, MilestoneLog } from '../types';
+import { Milk, Baby, Moon, Activity, Trash2, StickyNote, Sunrise, Sun, Sunset, MoonStar, Clock, AlertTriangle, Smile, Meh, Frown, ClipboardCheck, Star, Timer, Syringe, Flag } from 'lucide-react';
+import { HK_VACCINES, MILESTONES } from '../constants';
 
 interface LogListProps {
   logs: BabyLog[];
@@ -21,6 +22,9 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog, feedInterva
       case LogType.HEALTH: return <Activity className="w-5 h-5 text-emerald-500" />;
       case LogType.OTHER: return <StickyNote className="w-5 h-5 text-pink-500" />;
       case LogType.SUMMARY: return <ClipboardCheck className="w-5 h-5 text-amber-600" />;
+      case LogType.TUMMY_TIME: return <Timer className="w-5 h-5 text-orange-500" />;
+      case LogType.VACCINE: return <Syringe className="w-5 h-5 text-teal-500" />;
+      case LogType.MILESTONE: return <Flag className="w-5 h-5 text-purple-500" />;
       default: return <AlertTriangle className="w-5 h-5 text-gray-400" />;
     }
   };
@@ -108,6 +112,16 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog, feedInterva
             ].filter(Boolean).join(', ') || '無數值';
         case LogType.OTHER:
             return (log as OtherLog).details || '無內容';
+        case LogType.TUMMY_TIME:
+            return `${(log as TummyTimeLog).durationMinutes} 分鐘`;
+        case LogType.VACCINE:
+            const vId = (log as VaccineLog).vaccineId;
+            const v = HK_VACCINES.find(x => x.id === vId);
+            return v ? v.name : '未知疫苗';
+        case LogType.MILESTONE:
+            const mId = (log as MilestoneLog).milestoneId;
+            const m = MILESTONES.find(x => x.id === mId);
+            return m ? `[${m.category}] ${m.name}` : '未知里程碑';
         case LogType.SUMMARY:
             const sumLog = log as SummaryLog;
             return (

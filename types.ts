@@ -5,7 +5,10 @@ export enum LogType {
   SLEEP = 'SLEEP',
   HEALTH = 'HEALTH',
   OTHER = 'OTHER',
-  SUMMARY = 'SUMMARY' // New Log Type
+  SUMMARY = 'SUMMARY', // New Log Type
+  TUMMY_TIME = 'TUMMY_TIME',
+  VACCINE = 'VACCINE',
+  MILESTONE = 'MILESTONE'
 }
 
 export enum FeedType {
@@ -66,7 +69,22 @@ export interface OtherLog extends BaseLog {
   details: string;
 }
 
-export type BabyLog = FeedLog | DiaperLog | SleepLog | HealthLog | OtherLog | SummaryLog;
+export interface TummyTimeLog extends BaseLog {
+  type: LogType.TUMMY_TIME;
+  durationMinutes: number;
+}
+
+export interface VaccineLog extends BaseLog {
+  type: LogType.VACCINE;
+  vaccineId: string;
+}
+
+export interface MilestoneLog extends BaseLog {
+  type: LogType.MILESTONE;
+  milestoneId: string;
+}
+
+export type BabyLog = FeedLog | DiaperLog | SleepLog | HealthLog | OtherLog | SummaryLog | TummyTimeLog | VaccineLog | MilestoneLog;
 
 export interface DailySummary {
   date: string;
