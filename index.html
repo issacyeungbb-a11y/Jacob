@@ -44,10 +44,36 @@
           navigator.serviceWorker.register('/serviceWorker.js')
             .then(registration => {
               console.log('SW registered');
+              
+              // Check for updates
+              registration.onupdatefound = () => {
+                const installingWorker = registration.installing;
+                if (installingWorker == null) return;
+                
+                installingWorker.onstatechange = () => {
+                  if (installingWorker.state === 'installed') {
+                    if (navigator.serviceWorker.controller) {
+                      // New content is available, but wait for user to refresh or force it
+                      console.log('New content is available; please refresh.');
+                    } else {
+                      // Content is cached for offline use
+                      console.log('Content is cached for offline use.');
+                    }
+                  }
+                };
+              };
             })
             .catch(err => {
               console.log('SW failed', err);
             });
+        });
+
+        // Reload the page when the new service worker takes over
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (refreshing) return;
+          refreshing = true;
+          window.location.reload();
         });
       }
     </script>
