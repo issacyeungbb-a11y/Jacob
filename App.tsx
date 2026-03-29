@@ -15,7 +15,6 @@ import {
   deleteProfilePhotoFromCloud 
 } from './services/storageService';
 import { isConfigured } from './services/firebase';
-import { generateBabyInsights } from './services/geminiService';
 import { Dashboard } from './components/Dashboard';
 import { LogForm } from './components/LogForm';
 import { LogList } from './components/LogList';
@@ -23,8 +22,8 @@ import { TrendsChart } from './components/TrendsChart';
 import { HealthChart } from './components/HealthChart';
 import { VaccineTracker } from './components/VaccineTracker';
 import { MilestoneTracker } from './components/MilestoneTracker';
+import { WeeklyReport } from './components/WeeklyReport';
 import { 
-  Sparkles, 
   Download, 
   Baby, 
   CloudLightning, 
@@ -36,7 +35,6 @@ import {
   LayoutDashboard,
   History,
   BarChart2,
-  BrainCircuit,
   Plus,
   Loader2,
   WifiOff,
@@ -50,11 +48,13 @@ import {
   Sun,
   HelpCircle,
   HeartPulse,
-  Flag
+  Flag,
+  FileText,
+  TrendingUp
 } from 'lucide-react';
 import { BABY_NAME, BIRTH_DATE } from './constants';
 
-type AppView = 'HOME' | 'HISTORY' | 'ROUTINE' | 'MILESTONES' | 'AI' | 'HEALTH';
+type AppView = 'HOME' | 'HISTORY' | 'ROUTINE' | 'MILESTONES' | 'WEEKLY' | 'HEALTH';
 
 const App: React.FC = () => {
   if (!isConfigured) {
@@ -96,8 +96,6 @@ const App: React.FC = () => {
   const [isSleeping, setIsSleeping] = useState(false);
   const [sleepStartTime, setSleepStartTime] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(getLocalDateString(new Date()));
-  const [insights, setInsights] = useState<string>("");
-  const [isGeneratingInsights, setIsGeneratingInsights] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -280,13 +278,6 @@ const App: React.FC = () => {
     const days = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     return days;
   }, []);
-
-  const handleGenerateInsights = async () => {
-    setIsGeneratingInsights(true);
-    const result = await generateBabyInsights(logs);
-    setInsights(result);
-    setIsGeneratingInsights(false);
-  };
 
   const handleRetryImage = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -622,51 +613,9 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {activeView === 'AI' && (
+        {activeView === 'WEEKLY' && (
           <div className="space-y-6">
-            <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
-               <div className="absolute top-0 right-0 p-4 opacity-10">
-                  <BrainCircuit className="w-24 h-24" />
-               </div>
-               <div className="relative z-10">
-                 <h2 className="text-2xl font-black mb-2 flex items-center gap-2">
-                   <Sparkles className="w-6 h-6 text-amber-300" />
-                   AI 成長分析
-                 </h2>
-                 <p className="text-indigo-100 text-sm mb-6 leading-relaxed">
-                   讓 Gemini 分析 Jacob 最近 7 天的數據，提供個人化的成長建議。
-                 </p>
-                 <button 
-                   onClick={handleGenerateInsights}
-                   disabled={isGeneratingInsights}
-                   className="w-full py-4 bg-white text-indigo-700 font-black rounded-2xl shadow-lg hover:bg-indigo-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                 >
-                   {isGeneratingInsights ? (
-                     <>
-                       <div className="w-5 h-5 border-4 border-indigo-700 border-t-transparent rounded-full animate-spin"></div>
-                       分析中...
-                     </>
-                   ) : (
-                     <>
-                       <BrainCircuit className="w-5 h-5" />
-                       產生分析報告
-                     </>
-                   )}
-                 </button>
-               </div>
-            </div>
-
-            {insights && (
-              <div className="bg-white rounded-3xl p-6 shadow-sm border border-indigo-100 animate-fade-in">
-                 <div className="flex items-center gap-2 mb-4 text-indigo-600 font-bold">
-                    <History className="w-5 h-5" />
-                    分析結果
-                 </div>
-                 <div className="prose prose-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                    {insights}
-                 </div>
-              </div>
-            )}
+            <WeeklyReport logs={logs} />
           </div>
         )}
       </main>
@@ -685,7 +634,7 @@ const App: React.FC = () => {
                <Plus className="w-7 h-7" />
              </button>
           </div>
-          <NavButton view="AI" icon={BrainCircuit} label="AI 分析" />
+          <NavButton view="WEEKLY" icon={TrendingUp} label="週報" />
           <NavButton view="MILESTONES" icon={Flag} label="里程碑" />
           <NavButton view="HEALTH" icon={HeartPulse} label="健康紀錄" />
         </div>
