@@ -15,6 +15,16 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // 對於 HTML 請求使用 Network First，確保用戶能看到最新版本
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        return caches.match(event.request);
+      })
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
