@@ -1,16 +1,20 @@
 
 import React from 'react';
-import { BabyLog, LogType, FeedLog, DiaperLog, SleepLog, HealthLog, OtherLog, SummaryLog, TummyTimeLog, VaccineLog, MilestoneLog } from '../types';
-import { Milk, Baby, Moon, Activity, Trash2, StickyNote, Sunrise, Sun, Sunset, MoonStar, Clock, AlertTriangle, Smile, Meh, Frown, ClipboardCheck, Star, Timer, Syringe, Flag } from 'lucide-react';
+import { BabyLog, LogType, FeedLog, DiaperLog, SleepLog, HealthLog, OtherLog, SummaryLog, TummyTimeLog, VaccineLog, MilestoneLog, DiaperType } from '../types';
+import { Milk, Baby, Moon, Activity, Trash2, Edit2, StickyNote, Sunrise, Sun, Sunset, MoonStar, Clock, AlertTriangle, Smile, Meh, Frown, ClipboardCheck, Star, Timer, Syringe, Flag, X, Check } from 'lucide-react';
 import { HK_VACCINES, MILESTONES } from '../constants';
 
 interface LogListProps {
   logs: BabyLog[];
   onDeleteLog: (id: string) => void;
+  onUpdateLog: (log: BabyLog) => void;
   feedIntervals?: Record<string, string>;
 }
 
-export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog, feedIntervals }) => {
+export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog, onUpdateLog, feedIntervals }) => {
+  const [editingLogId, setEditingLogId] = React.useState<string | null>(null);
+  const [editValue, setEditValue] = React.useState<string>('');
+
   // Sort by date desc
   const sortedLogs = [...logs].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
@@ -77,6 +81,43 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog, feedInterva
   };
 
   const getDetails = (log: BabyLog) => {
+    if (editingLogId === log.id) {
+        return (
+            <div className="flex items-center gap-2 mt-1">
+                <input 
+                    type="text" 
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    className="flex-grow p-1 text-sm border rounded focus:ring-1 focus:ring-blue-400 outline-none"
+                    autoFocus
+                />
+                <button 
+                    onClick={() => {
+                        const updatedLog = { ...log };
+                        // Simple logic: update the primary field based on type
+                        switch(log.type) {
+                            case LogType.FEED: (updatedLog as FeedLog).amountMl = parseInt(editValue) || 0; break;
+                            case LogType.DIAPER: (updatedLog as DiaperLog).status = editValue as DiaperType; break;
+                            case LogType.OTHER: (updatedLog as OtherLog).details = editValue; break;
+                            case LogType.TUMMY_TIME: (updatedLog as TummyTimeLog).durationMinutes = parseInt(editValue) || 0; break;
+                        }
+                        onUpdateLog(updatedLog);
+                        setEditingLogId(null);
+                    }}
+                    className="p-1 text-emerald-500 hover:bg-emerald-50 rounded"
+                >
+                    <Check className="w-4 h-4" />
+                </button>
+                <button 
+                    onClick={() => setEditingLogId(null)}
+                    className="p-1 text-gray-400 hover:bg-gray-50 rounded"
+                >
+                    <X className="w-4 h-4" />
+                </button>
+            </div>
+        );
+    }
+
     try {
         switch (log.type) {
         case LogType.FEED:
@@ -208,15 +249,41 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog, feedInterva
                 </div>
               </div>
 
-              <button 
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteLog(log.id);
-                }}
-                className="p-2 text-gray-300 hover:text-red-400 transition-colors flex-shrink-0"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              <div className="flex flex-col gap-1">
+                <button 
+                  onClick={(e) => {
+                      e.stopPropagation();
+                      if (editingLogId === log.id) {
+                          setEditingLogId(null);
+                      } else {
+                          setEditingLogId(log.id);
+                          // Set initial edit value
+                          switch(log.type) {
+                              case LogType.FEED: setEditValue(String((log as FeedLog).amountMl || '')); break;
+                              case LogType.DIAPER: setEditValue((log as DiaperLog).status || ''); break;
+                              case LogType.OTHER: setEditValue((log as OtherLog).details || ''); break;
+                              case LogType.TUMMY_TIME: setEditValue(String((log as TummyTimeLog).durationMinutes || '')); break;
+                              default: setEditValue('');
+                          }
+                      }
+                  }}
+                  className={`p-2 transition-colors flex-shrink-0 ${editingLogId === log.id ? 'text-blue-500' : 'text-gray-300 hover:text-blue-400'}`}
+                >
+                  <Edit2 className="w-4 h-4" />
+                </button>
+
+                <button 
+                  onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm('確定要刪除這條記錄嗎？')) {
+                        onDeleteLog(log.id);
+                      }
+                  }}
+                  className="p-2 text-gray-300 hover:text-red-400 transition-colors flex-shrink-0"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
         );

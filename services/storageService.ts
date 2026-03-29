@@ -121,6 +121,18 @@ export const deleteLogFromCloud = async (id: string) => {
   } catch (e) {
     console.error("Error removing document: ", e);
     alert("刪除失敗，請檢查網路連線");
+    throw e;
+  }
+};
+
+// 更新記錄 (雲端更新)
+export const updateLogInCloud = async (log: BabyLog) => {
+  try {
+    await setDoc(doc(db, COLLECTION_NAME, log.id), log);
+  } catch (e) {
+    console.error("Error updating document: ", e);
+    alert("更新失敗，請檢查網路連線");
+    throw e;
   }
 };
 

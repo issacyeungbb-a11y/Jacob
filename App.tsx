@@ -7,6 +7,7 @@ import {
   subscribeToProfilePhoto, 
   addLogToCloud, 
   deleteLogFromCloud, 
+  updateLogInCloud,
   exportLogsToJSON, 
   setSleepStatus, 
   clearSleepStatus,
@@ -180,6 +181,11 @@ const App: React.FC = () => {
 
     await addLogToCloud(log);
     showToast("記錄已儲存！");
+  };
+
+  const handleUpdateLog = async (log: BabyLog) => {
+    await updateLogInCloud(log);
+    showToast("記錄已更新！");
   };
 
   const handleStartSleep = async (startTime: string) => {
@@ -588,7 +594,12 @@ const App: React.FC = () => {
                   <ChevronRight className="w-5 h-5" />
                 </button>
              </div>
-             <LogList logs={filteredLogs} onDeleteLog={deleteLogFromCloud} feedIntervals={feedIntervals} />
+             <LogList 
+                logs={filteredLogs} 
+                onDeleteLog={deleteLogFromCloud} 
+                onUpdateLog={handleUpdateLog}
+                feedIntervals={feedIntervals} 
+              />
           </div>
         )}
 
