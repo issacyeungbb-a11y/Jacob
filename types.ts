@@ -8,7 +8,8 @@ export enum LogType {
   SUMMARY = 'SUMMARY', // New Log Type
   TUMMY_TIME = 'TUMMY_TIME',
   VACCINE = 'VACCINE',
-  MILESTONE = 'MILESTONE'
+  MILESTONE = 'MILESTONE',
+  WEEKLY_AI_REPORT = 'WEEKLY_AI_REPORT'
 }
 
 export enum FeedType {
@@ -82,6 +83,14 @@ export interface VaccineLog extends BaseLog {
 export interface MilestoneLog extends BaseLog {
   type: LogType.MILESTONE;
   milestoneId: string;
+}
+
+export interface WeeklyAIReport {
+  id: string; // week number or date string
+  weekNum: number;
+  dateRange: string;
+  content: string;
+  createdAt: string;
 }
 
 export type BabyLog = FeedLog | DiaperLog | SleepLog | HealthLog | OtherLog | SummaryLog | TummyTimeLog | VaccineLog | MilestoneLog;

@@ -9,12 +9,36 @@ import {
   query, 
   orderBy 
 } from 'firebase/firestore';
-import { BabyLog } from '../types';
+import { BabyLog, WeeklyAIReport } from '../types';
 
 const COLLECTION_NAME = 'jacob_logs';
 const SETTINGS_COLLECTION = 'jacob_settings';
 const PHOTO_DOC_ID = 'profile_photo';
 const STATUS_DOC_ID = 'status_sleep';
+const WEEKLY_REPORTS_COLLECTION = 'jacob_weekly_reports';
+
+// 監聽週報
+export const subscribeToWeeklyReports = (onUpdate: (reports: WeeklyAIReport[]) => void) => {
+  const q = query(collection(db, WEEKLY_REPORTS_COLLECTION), orderBy("createdAt", "desc"));
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const reports: WeeklyAIReport[] = [];
+    snapshot.forEach((docSnap) => {
+      reports.push(docSnap.data() as WeeklyAIReport);
+    });
+    onUpdate(reports);
+  });
+  return unsubscribe;
+};
+
+// 儲存週報
+export const saveWeeklyReport = async (report: WeeklyAIReport) => {
+  try {
+    await setDoc(doc(db, WEEKLY_REPORTS_COLLECTION, report.id), report);
+  } catch (e) {
+    console.error("Error saving weekly report:", e);
+    throw e;
+  }
+};
 
 // 監聽資料庫變更 (即時同步)
 export const subscribeToLogs = (onUpdate: (logs: BabyLog[]) => void, onError?: (error: any) => void) => {
