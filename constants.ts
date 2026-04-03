@@ -42,18 +42,41 @@ export const HK_VACCINES = [
 // CDC / HK FHS Milestones
 // Source: CDC (Centers for Disease Control and Prevention) & HK FHS
 export const MILESTONES = [
+  // 2 個月
   { id: 'm_2_1', month: 2, category: '社交/情緒', name: '會對著人微笑' },
-  { id: 'm_2_2', month: 2, category: '大肌肉', name: '趴著時能抬起頭' },
-  { id: 'm_2_3', month: 2, category: '大肌肉', name: '手腳能做出較平順的動作' },
+  { id: 'm_2_2', month: 2, category: '語言/溝通', name: '會發出咕嚕聲或咕咕聲' },
+  { id: 'm_2_3', month: 2, category: '認知', name: '會注視移動中的物體' },
+  { id: 'm_2_4', month: 2, category: '大肌肉', name: '趴著時能抬起頭' },
+  { id: 'm_2_5', month: 2, category: '細肌肉', name: '手部會張開，不再整天握拳' },
+  
+  // 4 個月
   { id: 'm_4_1', month: 4, category: '社交/情緒', name: '會主動微笑，喜歡和人玩' },
-  { id: 'm_4_2', month: 4, category: '語言', name: '開始牙牙學語 (發出咕嚕聲)' },
-  { id: 'm_4_3', month: 4, category: '大肌肉', name: '頭部能保持穩定，不需要支撐' },
-  { id: 'm_4_4', month: 4, category: '大肌肉', name: '趴著時能用手肘撐起上半身' },
-  { id: 'm_6_1', month: 6, category: '認知', name: '會把東西放進嘴裡' },
-  { id: 'm_6_2', month: 6, category: '大肌肉', name: '能向兩個方向翻身 (趴轉仰、仰轉趴)' },
-  { id: 'm_6_3', month: 6, category: '大肌肉', name: '開始能不用支撐坐著' },
+  { id: 'm_4_2', month: 4, category: '語言/溝通', name: '開始牙牙學語，會模仿聲音' },
+  { id: 'm_4_3', month: 4, category: '認知', name: '會用手抓玩具，並放進嘴裡' },
+  { id: 'm_4_4', month: 4, category: '大肌肉', name: '頭部能保持穩定，不需要支撐' },
+  { id: 'm_4_5', month: 4, category: '大肌肉', name: '趴著時能用手肘撐起上半身' },
+  { id: 'm_4_6', month: 4, category: '細肌肉', name: '能伸手抓握懸掛的玩具' },
+
+  // 6 個月
+  { id: 'm_6_1', month: 6, category: '社交/情緒', name: '認識熟悉的人，對陌生人有反應' },
+  { id: 'm_6_2', month: 6, category: '語言/溝通', name: '發出連串輔音 (如 ba-ba, da-da)' },
+  { id: 'm_6_3', month: 6, category: '認知', name: '會把東西從一隻手傳到另一隻手' },
+  { id: 'm_6_4', month: 6, category: '大肌肉', name: '能向兩個方向翻身' },
+  { id: 'm_6_5', month: 6, category: '大肌肉', name: '開始能不用支撐坐著' },
+  { id: 'm_6_6', month: 6, category: '細肌肉', name: '能用手掌抓起小物件' },
+
+  // 9 個月
   { id: 'm_9_1', month: 9, category: '社交/情緒', name: '可能對陌生人感到害怕 (認生)' },
-  { id: 'm_9_2', month: 9, category: '語言', name: '明白「不」的意思' },
-  { id: 'm_9_3', month: 9, category: '大肌肉', name: '能自己坐起來' },
-  { id: 'm_9_4', month: 9, category: '大肌肉', name: '開始爬行' },
+  { id: 'm_9_2', month: 9, category: '語言/溝通', name: '明白「不」的意思，會揮手再見' },
+  { id: 'm_9_3', month: 9, category: '認知', name: '會玩躲貓貓 (Peek-a-boo)' },
+  { id: 'm_9_4', month: 9, category: '大肌肉', name: '能自己坐起來，開始爬行' },
+  { id: 'm_9_5', month: 9, category: '大肌肉', name: '能扶著家具站立' },
+  { id: 'm_9_6', month: 9, category: '細肌肉', name: '能用拇指和食指抓取東西 (鉗夾動作)' },
+
+  // 12 個月
+  { id: 'm_12_1', month: 12, category: '社交/情緒', name: '會模仿別人的動作，表現出偏好' },
+  { id: 'm_12_2', month: 12, category: '語言/溝通', name: '會說簡單的詞 (如「爸爸」、「媽媽」)' },
+  { id: 'm_12_3', month: 12, category: '認知', name: '會正確使用物品 (如梳頭、喝水)' },
+  { id: 'm_12_4', month: 12, category: '大肌肉', name: '能扶著東西走幾步，甚至獨立行走' },
+  { id: 'm_12_5', month: 12, category: '細肌肉', name: '能把東西放進容器裡，再拿出來' },
 ];
