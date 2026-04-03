@@ -50,9 +50,14 @@ import {
   HeartPulse,
   Flag,
   FileText,
-  TrendingUp
+  TrendingUp,
+  Sparkles,
+  BrainCircuit
 } from 'lucide-react';
 import { BABY_NAME, BIRTH_DATE } from './constants';
+import { WeeklyAIReport } from './types';
+import { subscribeToWeeklyReports } from './services/storageService';
+import ReactMarkdown from 'react-markdown';
 
 type AppView = 'HOME' | 'HISTORY' | 'ROUTINE' | 'MILESTONES' | 'WEEKLY' | 'HEALTH';
 
@@ -102,6 +107,10 @@ const App: React.FC = () => {
   // Toast Notification State
   const [toast, setToast] = useState<{show: boolean, msg: string}>({ show: false, msg: '' });
 
+  // Weekly Report Popup State
+  const [showWeeklyPopup, setShowWeeklyPopup] = useState(false);
+  const [latestReport, setLatestReport] = useState<WeeklyAIReport | null>(null);
+
   // Wake Up Prompt State
   const [pendingLog, setPendingLog] = useState<BabyLog | null>(null);
   const [showWakePrompt, setShowWakePrompt] = useState(false);
@@ -146,13 +155,55 @@ const App: React.FC = () => {
       setImgError(false); // 重設錯誤狀態，因為可能從雲端載入了有效圖片
     });
 
+    // 4. 訂閱週報並檢查是否需要彈出
+    const unsubscribeWeekly = subscribeToWeeklyReports((reports) => {
+      if (reports.length > 0) {
+        const latest = reports[0];
+        
+        // Calculate current week info
+        const birth = new Date(BIRTH_DATE);
+        const now = new Date();
+        const diffTime = now.getTime() - birth.getTime();
+        const weekNum = Math.floor(diffTime / (7 * 24 * 60 * 60 * 1000)) + 1;
+        
+        // Check if it's Friday 8 PM
+        const dayOfWeek = now.getDay();
+        let thisFriday = new Date(now);
+        if (dayOfWeek <= 5) {
+          thisFriday.setDate(now.getDate() + (5 - dayOfWeek));
+        } else {
+          thisFriday.setDate(now.getDate() - (dayOfWeek - 5));
+        }
+        thisFriday.setHours(20, 0, 0, 0);
+        
+        const isFriday8PMReached = now >= thisFriday;
+
+        // If report is for current week and it's past Friday 8 PM
+        if (latest.weekNum === weekNum && isFriday8PMReached) {
+          const lastSeenKey = `last_seen_report_${latest.id}`;
+          if (!localStorage.getItem(lastSeenKey)) {
+            setLatestReport(latest);
+            setShowWeeklyPopup(true);
+          }
+        }
+      }
+    });
+
     return () => {
       unsubscribeLogs();
       unsubscribeSleep();
       unsubscribePhoto();
+      unsubscribeWeekly();
       clearTimeout(timeout);
     };
   }, []);
+
+  const dismissWeeklyPopup = () => {
+    if (latestReport) {
+      localStorage.setItem(`last_seen_report_${latestReport.id}`, 'true');
+    }
+    setShowWeeklyPopup(false);
+  };
 
   const showToast = (msg: string) => {
     setToast({ show: true, msg });
@@ -429,6 +480,51 @@ const App: React.FC = () => {
                           className="w-full py-2 text-gray-400 text-xs font-medium hover:text-gray-600"
                       >
                           取消操作
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* Weekly Report Popup Modal */}
+      {showWeeklyPopup && latestReport && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+              <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-hidden flex flex-col">
+                  <div className="bg-gradient-to-br from-indigo-600 to-blue-700 p-6 text-white relative">
+                      <button 
+                        onClick={dismissWeeklyPopup}
+                        className="absolute top-4 right-4 p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="bg-amber-400 p-2 rounded-xl">
+                          <Sparkles className="w-6 h-6 text-amber-900" />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-black tracking-tight">Jacob 第 {latestReport.weekNum} 週 AI 深度週報</h3>
+                          <p className="text-indigo-100 text-xs font-bold">{latestReport.dateRange}</p>
+                        </div>
+                      </div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-6 prose prose-sm max-w-none prose-headings:text-indigo-900 prose-headings:font-black prose-p:text-gray-700 prose-p:leading-relaxed prose-li:text-gray-700">
+                      <ReactMarkdown>{latestReport.content}</ReactMarkdown>
+                  </div>
+                  <div className="p-4 bg-gray-50 border-t border-gray-100 flex gap-3">
+                      <button 
+                          onClick={dismissWeeklyPopup}
+                          className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl shadow-lg shadow-indigo-100 transition-all active:scale-95"
+                      >
+                          我明白了，繼續記錄
+                      </button>
+                      <button 
+                          onClick={() => {
+                            dismissWeeklyPopup();
+                            setActiveView('WEEKLY');
+                          }}
+                          className="px-6 py-4 bg-white border border-gray-200 text-gray-600 font-bold rounded-2xl hover:bg-gray-50 transition-colors"
+                      >
+                          查看歷史
                       </button>
                   </div>
               </div>
