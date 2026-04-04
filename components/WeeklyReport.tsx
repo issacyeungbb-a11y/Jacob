@@ -116,6 +116,44 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs }) => {
         </div>
       </div>
 
+      {/* Test AI Connection Section (Always Visible for Debugging) */}
+      <div className="bg-white rounded-3xl p-5 border border-indigo-100 shadow-sm space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-indigo-500" />
+            <h4 className="font-bold text-gray-800 text-sm">AI 功能測試</h4>
+          </div>
+          <span className="text-[9px] font-bold text-indigo-400 bg-indigo-50 px-2 py-0.5 rounded-md">
+            連線診斷
+          </span>
+        </div>
+        
+        {testResult && (
+          <div className={`p-4 rounded-2xl text-xs leading-relaxed ${testResult.includes('錯誤') ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-indigo-50 text-indigo-700 border border-indigo-100'}`}>
+            <p className="font-bold mb-1">{testResult.includes('錯誤') ? '❌ 測試結果：' : '✅ AI 正常運作中：'}</p>
+            {testResult}
+          </div>
+        )}
+
+        <button
+          onClick={handleTestAI}
+          disabled={isTesting}
+          className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 shadow-md shadow-indigo-100"
+        >
+          {isTesting ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>正在檢查 API 連線...</span>
+            </>
+          ) : (
+            <>
+              <BrainCircuit className="w-4 h-4" />
+              <span>立即測試 AI 是否可用</span>
+            </>
+          )}
+        </button>
+      </div>
+
       {/* AI Weekly Report Section */}
       <div className="space-y-4">
         <div className="flex items-center justify-between px-2">
@@ -139,42 +177,6 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs }) => {
                   距離下次發布還有：{currentWeekInfo.thisFriday.toLocaleString('zh-HK')}
                 </p>
               </div>
-            </div>
-
-            {/* Test AI Connection Section */}
-            <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm space-y-4">
-              <div className="flex items-center gap-2">
-                <BrainCircuit className="w-5 h-5 text-indigo-500" />
-                <h4 className="font-bold text-gray-800 text-sm">測試 AI 連線</h4>
-              </div>
-              <p className="text-xs text-gray-500 leading-relaxed">
-                想知道您的 API Key 是否設定成功？點擊下方按鈕進行即時測試。
-              </p>
-              
-              {testResult && (
-                <div className={`p-4 rounded-2xl text-xs leading-relaxed ${testResult.includes('錯誤') ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-indigo-50 text-indigo-700 border border-indigo-100'}`}>
-                  <p className="font-bold mb-1">{testResult.includes('錯誤') ? '❌ 測試結果：' : '✅ AI 回應測試：'}</p>
-                  {testResult}
-                </div>
-              )}
-
-              <button
-                onClick={handleTestAI}
-                disabled={isTesting}
-                className="w-full py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-bold rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
-              >
-                {isTesting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>正在測試連線...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" />
-                    <span>立即測試 AI 連線</span>
-                  </>
-                )}
-              </button>
             </div>
           </div>
         )}
