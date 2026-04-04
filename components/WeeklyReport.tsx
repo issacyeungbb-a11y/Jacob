@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { BabyLog, LogType, FeedLog, SleepLog, DiaperLog, WeeklyAIReport } from '../types';
-import { Calendar, Milk, Moon, Baby, TrendingUp, Info, Sparkles, BrainCircuit, Loader2, ChevronRight, ChevronLeft, Clock, RefreshCw } from 'lucide-react';
+import { Calendar, Milk, Moon, Baby, TrendingUp, Info, Sparkles, BrainCircuit, Loader2, ChevronRight, ChevronLeft, Clock } from 'lucide-react';
 import { BIRTH_DATE, BABY_NAME } from '../constants';
 import { generateWeeklyAIReport, generateBabyInsights } from '../services/geminiService';
 import { saveWeeklyReport, subscribeToWeeklyReports } from '../services/storageService';
@@ -14,27 +14,11 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs }) => {
   const [weeklyReports, setWeeklyReports] = useState<WeeklyAIReport[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
-  const [testResult, setTestResult] = useState<string | null>(null);
-  const [isTesting, setIsTesting] = useState(false);
 
   useEffect(() => {
     const unsubscribe = subscribeToWeeklyReports(setWeeklyReports);
     return () => unsubscribe();
   }, []);
-
-  const handleTestAI = async () => {
-    if (isTesting) return;
-    setIsTesting(true);
-    setTestResult(null);
-    try {
-      const result = await generateBabyInsights(logs);
-      setTestResult(result);
-    } catch (error) {
-      setTestResult("測試失敗，請檢查 API Key 設定。");
-    } finally {
-      setIsTesting(false);
-    }
-  };
 
   const currentWeekInfo = useMemo(() => {
     const birth = new Date(BIRTH_DATE);
@@ -59,7 +43,13 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs }) => {
 
     const isFriday8PMReached = today >= thisFriday;
 
-    return { weekNum, months, isFriday8PMReached, thisFriday };
+    // Calculate next report date
+    let nextFriday = new Date(thisFriday);
+    if (isFriday8PMReached) {
+      nextFriday.setDate(thisFriday.getDate() + 7);
+    }
+
+    return { weekNum, months, isFriday8PMReached, thisFriday, nextFriday };
   }, []);
 
   const handleGenerateReport = async () => {
@@ -109,9 +99,17 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs }) => {
             <BrainCircuit className="w-6 h-6 text-amber-300" />
             AI 深度週報
           </h2>
-          <p className="text-indigo-100 text-sm leading-relaxed">
-            每週五晚上 8:00 解鎖，為 Jacob 提供最專業的成長分析與育兒建議。
-          </p>
+          <div className="space-y-2">
+            <p className="text-indigo-100 text-sm leading-relaxed">
+              每週五晚上 8:00 解鎖，為 Jacob 提供最專業的成長分析與育兒建議。
+            </p>
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
+              <Clock className="w-3 h-3 text-amber-300" />
+              <span className="text-[10px] font-bold tracking-wider uppercase">
+                下次更新：{currentWeekInfo.nextFriday.toLocaleDateString('zh-HK', { month: 'short', day: 'numeric' })} 20:00
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -132,10 +130,10 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs }) => {
             <div className="bg-amber-50 rounded-3xl p-6 border border-amber-100 text-center space-y-3">
               <Clock className="w-10 h-10 text-amber-500 mx-auto opacity-50" />
               <div className="space-y-1">
-                <p className="font-black text-amber-800">未到發布時間</p>
+                <p className="font-black text-amber-800">本週週報編寫中</p>
                 <p className="text-xs text-amber-600 leading-relaxed">
-                  每週五晚上 8:00 將會解鎖本週的 AI 深度週報。<br/>
-                  距離下次發布還有：{currentWeekInfo.thisFriday.toLocaleString('zh-HK')}
+                  Jacob 的第 {currentWeekInfo.weekNum} 週深度週報將於以下時間解鎖：<br/>
+                  <span className="font-black text-amber-700">{currentWeekInfo.thisFriday.toLocaleString('zh-HK', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                 </p>
               </div>
             </div>
@@ -203,21 +201,6 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs }) => {
                 </div>
                 <div className="p-6 prose prose-sm max-w-none prose-headings:text-indigo-900 prose-headings:font-black prose-p:text-gray-700 prose-p:leading-relaxed prose-li:text-gray-700">
                   <ReactMarkdown>{selectedReport.content}</ReactMarkdown>
-                  
-                  {/* Regenerate button if report contains error */}
-                  {selectedReport.content.includes('系統設定錯誤') && (
-                    <div className="mt-6 p-4 bg-blue-50 rounded-2xl border border-blue-100 text-center">
-                      <p className="text-xs text-blue-600 mb-3 font-bold">偵測到此報告包含錯誤訊息，您可以嘗試重新產生。</p>
-                      <button
-                        onClick={handleGenerateReport}
-                        disabled={isGenerating}
-                        className="px-6 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl flex items-center gap-2 mx-auto hover:bg-blue-700 transition-colors"
-                      >
-                        {isGenerating ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                        重新產生報告
-                      </button>
-                    </div>
-                  )}
                 </div>
                 <div className="bg-gray-50 px-6 py-4 border-t border-gray-100 text-center">
                   <p className="text-[10px] text-gray-400 font-medium italic">
