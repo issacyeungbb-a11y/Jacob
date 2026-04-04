@@ -3,9 +3,13 @@ import { BabyLog, LogType } from "../types";
 import { BIRTH_DATE, BABY_NAME } from "../constants";
 
 export const generateBabyInsights = async (logs: BabyLog[]): Promise<string> => {
-  const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env.VITE_GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || 
+                 (import.meta as any).env.VITE_GEMINI_API_KEY || 
+                 process.env.API_KEY || 
+                 (import.meta as any).env.VITE_API_KEY;
+  
   if (!apiKey || apiKey === "undefined" || apiKey === "") {
-    return "系統設定錯誤：找不到 GEMINI_API_KEY，請確保已在 Secrets 中設定並點擊 Apply changes。";
+    return "系統設定錯誤：找不到 API Key，請確保已在 Secrets 或 Vercel 中設定 GEMINI_API_KEY 或 API_KEY。";
   }
 
   let ai;
@@ -63,9 +67,13 @@ export const generateWeeklyAIReport = async (
   months: number, 
   dateStr: string
 ): Promise<string> => {
-  const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env.VITE_GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || 
+                 (import.meta as any).env.VITE_GEMINI_API_KEY || 
+                 process.env.API_KEY || 
+                 (import.meta as any).env.VITE_API_KEY;
+  
   if (!apiKey || apiKey === "undefined" || apiKey === "") {
-    return "系統設定錯誤：找不到 GEMINI_API_KEY，請確保已在 Secrets 中設定並點擊 Apply changes。";
+    return "系統設定錯誤：找不到 API Key，請確保已在 Secrets 或 Vercel 中設定 GEMINI_API_KEY 或 API_KEY。";
   }
 
   let ai;

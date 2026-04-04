@@ -7,8 +7,9 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     define: {
-      // This allows process.env.GEMINI_API_KEY to work in the browser
+      // This allows process.env.GEMINI_API_KEY and API_KEY to work in the browser
       'process.env.GEMINI_API_KEY': JSON.stringify(process.env.GEMINI_API_KEY || env.GEMINI_API_KEY),
+      'process.env.API_KEY': JSON.stringify(process.env.API_KEY || env.API_KEY),
     },
     build: {
       outDir: 'dist',
