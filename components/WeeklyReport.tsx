@@ -1,7 +1,6 @@
-
 import React, { useMemo, useState, useEffect } from 'react';
 import { BabyLog, LogType, FeedLog, SleepLog, DiaperLog, WeeklyAIReport } from '../types';
-import { Calendar, Milk, Moon, Baby, TrendingUp, Info, Sparkles, BrainCircuit, Loader2, ChevronRight, ChevronLeft, Clock } from 'lucide-react';
+import { Calendar, Milk, Moon, Baby, TrendingUp, Info, Sparkles, BrainCircuit, Loader2, ChevronRight, ChevronLeft, Clock, RefreshCw } from 'lucide-react';
 import { BIRTH_DATE, BABY_NAME } from '../constants';
 import { generateWeeklyAIReport, generateBabyInsights } from '../services/geminiService';
 import { saveWeeklyReport, subscribeToWeeklyReports } from '../services/storageService';
