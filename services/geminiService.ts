@@ -3,13 +3,17 @@ import { BabyLog, LogType } from "../types";
 import { BIRTH_DATE, BABY_NAME } from "../constants";
 
 export const generateBabyInsights = async (logs: BabyLog[]): Promise<string> => {
-  // Initialize AI client lazily to prevent top-level crashes if env var is missing during initial load
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey === "undefined" || apiKey === "") {
+    return "系統設定錯誤：找不到 GEMINI_API_KEY，請確保已在 Secrets 中設定並點擊 Apply changes。";
+  }
+
   let ai;
   try {
-    ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    ai = new GoogleGenAI({ apiKey });
   } catch (e) {
     console.error("Failed to initialize GoogleGenAI:", e);
-    return "系統設定錯誤：找不到 API Key，請檢查環境變數設定。";
+    return "系統設定錯誤：API Key 初始化失敗，請檢查格式是否正確。";
   }
 
   // Filter for last 7 days to keep context relevant and small
@@ -59,12 +63,17 @@ export const generateWeeklyAIReport = async (
   months: number, 
   dateStr: string
 ): Promise<string> => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey === "undefined" || apiKey === "") {
+    return "系統設定錯誤：找不到 GEMINI_API_KEY，請確保已在 Secrets 中設定並點擊 Apply changes。";
+  }
+
   let ai;
   try {
-    ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    ai = new GoogleGenAI({ apiKey });
   } catch (e) {
     console.error("Failed to initialize GoogleGenAI:", e);
-    return "系統設定錯誤：找不到 API Key。";
+    return "系統設定錯誤：API Key 初始化失敗。";
   }
 
   const sevenDaysAgo = new Date();
