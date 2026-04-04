@@ -3,7 +3,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { BabyLog, LogType, FeedLog, SleepLog, DiaperLog, WeeklyAIReport } from '../types';
 import { Calendar, Milk, Moon, Baby, TrendingUp, Info, Sparkles, BrainCircuit, Loader2, ChevronRight, ChevronLeft, Clock } from 'lucide-react';
 import { BIRTH_DATE, BABY_NAME } from '../constants';
-import { generateWeeklyAIReport } from '../services/geminiService';
+import { generateWeeklyAIReport, generateBabyInsights } from '../services/geminiService';
 import { saveWeeklyReport, subscribeToWeeklyReports } from '../services/storageService';
 import ReactMarkdown from 'react-markdown';
 
@@ -15,11 +15,27 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs }) => {
   const [weeklyReports, setWeeklyReports] = useState<WeeklyAIReport[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<string | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
 
   useEffect(() => {
     const unsubscribe = subscribeToWeeklyReports(setWeeklyReports);
     return () => unsubscribe();
   }, []);
+
+  const handleTestAI = async () => {
+    if (isTesting) return;
+    setIsTesting(true);
+    setTestResult(null);
+    try {
+      const result = await generateBabyInsights(logs);
+      setTestResult(result);
+    } catch (error) {
+      setTestResult("測試失敗，請檢查 API Key 設定。");
+    } finally {
+      setIsTesting(false);
+    }
+  };
 
   const currentWeekInfo = useMemo(() => {
     const birth = new Date(BIRTH_DATE);
@@ -113,14 +129,52 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs }) => {
         </div>
 
         {!currentWeekInfo.isFriday8PMReached && (
-          <div className="bg-amber-50 rounded-3xl p-6 border border-amber-100 text-center space-y-3">
-            <Clock className="w-10 h-10 text-amber-500 mx-auto opacity-50" />
-            <div className="space-y-1">
-              <p className="font-black text-amber-800">未到發布時間</p>
-              <p className="text-xs text-amber-600 leading-relaxed">
-                每週五晚上 8:00 將會解鎖本週的 AI 深度週報。<br/>
-                距離下次發布還有：{currentWeekInfo.thisFriday.toLocaleString('zh-HK')}
+          <div className="space-y-4">
+            <div className="bg-amber-50 rounded-3xl p-6 border border-amber-100 text-center space-y-3">
+              <Clock className="w-10 h-10 text-amber-500 mx-auto opacity-50" />
+              <div className="space-y-1">
+                <p className="font-black text-amber-800">未到發布時間</p>
+                <p className="text-xs text-amber-600 leading-relaxed">
+                  每週五晚上 8:00 將會解鎖本週的 AI 深度週報。<br/>
+                  距離下次發布還有：{currentWeekInfo.thisFriday.toLocaleString('zh-HK')}
+                </p>
+              </div>
+            </div>
+
+            {/* Test AI Connection Section */}
+            <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm space-y-4">
+              <div className="flex items-center gap-2">
+                <BrainCircuit className="w-5 h-5 text-indigo-500" />
+                <h4 className="font-bold text-gray-800 text-sm">測試 AI 連線</h4>
+              </div>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                想知道您的 API Key 是否設定成功？點擊下方按鈕進行即時測試。
               </p>
+              
+              {testResult && (
+                <div className={`p-4 rounded-2xl text-xs leading-relaxed ${testResult.includes('錯誤') ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-indigo-50 text-indigo-700 border border-indigo-100'}`}>
+                  <p className="font-bold mb-1">{testResult.includes('錯誤') ? '❌ 測試結果：' : '✅ AI 回應測試：'}</p>
+                  {testResult}
+                </div>
+              )}
+
+              <button
+                onClick={handleTestAI}
+                disabled={isTesting}
+                className="w-full py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-bold rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+              >
+                {isTesting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>正在測試連線...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    <span>立即測試 AI 連線</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         )}
