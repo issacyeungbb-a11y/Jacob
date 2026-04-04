@@ -116,44 +116,6 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs }) => {
         </div>
       </div>
 
-      {/* Test AI Connection Section (Always Visible for Debugging) */}
-      <div className="bg-white rounded-3xl p-5 border border-indigo-100 shadow-sm space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-indigo-500" />
-            <h4 className="font-bold text-gray-800 text-sm">AI 功能測試</h4>
-          </div>
-          <span className="text-[9px] font-bold text-indigo-400 bg-indigo-50 px-2 py-0.5 rounded-md">
-            連線診斷
-          </span>
-        </div>
-        
-        {testResult && (
-          <div className={`p-4 rounded-2xl text-xs leading-relaxed ${testResult.includes('錯誤') ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-indigo-50 text-indigo-700 border border-indigo-100'}`}>
-            <p className="font-bold mb-1">{testResult.includes('錯誤') ? '❌ 測試結果：' : '✅ AI 正常運作中：'}</p>
-            {testResult}
-          </div>
-        )}
-
-        <button
-          onClick={handleTestAI}
-          disabled={isTesting}
-          className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 shadow-md shadow-indigo-100"
-        >
-          {isTesting ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>正在檢查 API 連線...</span>
-            </>
-          ) : (
-            <>
-              <BrainCircuit className="w-4 h-4" />
-              <span>立即測試 AI 是否可用</span>
-            </>
-          )}
-        </button>
-      </div>
-
       {/* AI Weekly Report Section */}
       <div className="space-y-4">
         <div className="flex items-center justify-between px-2">
@@ -242,6 +204,21 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs }) => {
                 </div>
                 <div className="p-6 prose prose-sm max-w-none prose-headings:text-indigo-900 prose-headings:font-black prose-p:text-gray-700 prose-p:leading-relaxed prose-li:text-gray-700">
                   <ReactMarkdown>{selectedReport.content}</ReactMarkdown>
+                  
+                  {/* Regenerate button if report contains error */}
+                  {selectedReport.content.includes('系統設定錯誤') && (
+                    <div className="mt-6 p-4 bg-blue-50 rounded-2xl border border-blue-100 text-center">
+                      <p className="text-xs text-blue-600 mb-3 font-bold">偵測到此報告包含錯誤訊息，您可以嘗試重新產生。</p>
+                      <button
+                        onClick={handleGenerateReport}
+                        disabled={isGenerating}
+                        className="px-6 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl flex items-center gap-2 mx-auto hover:bg-blue-700 transition-colors"
+                      >
+                        {isGenerating ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                        重新產生報告
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div className="bg-gray-50 px-6 py-4 border-t border-gray-100 text-center">
                   <p className="text-[10px] text-gray-400 font-medium italic">
