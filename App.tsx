@@ -12,9 +12,12 @@ import {
   setSleepStatus, 
   clearSleepStatus,
   uploadProfilePhotoToCloud, 
-  deleteProfilePhotoFromCloud 
+  deleteProfilePhotoFromCloud,
+  subscribeToWeeklyReports,
+  saveWeeklyReport
 } from './services/storageService';
 import { isConfigured } from './services/firebase';
+import { generateWeeklyAIReport } from './services/geminiService';
 import { Dashboard } from './components/Dashboard';
 import { LogForm } from './components/LogForm';
 import { LogList } from './components/LogList';
@@ -56,7 +59,6 @@ import {
 } from 'lucide-react';
 import { BABY_NAME, BIRTH_DATE } from './constants';
 import { WeeklyAIReport } from './types';
-import { subscribeToWeeklyReports } from './services/storageService';
 import ReactMarkdown from 'react-markdown';
 
 type AppView = 'HOME' | 'HISTORY' | 'ROUTINE' | 'MILESTONES' | 'WEEKLY' | 'HEALTH';
@@ -98,6 +100,13 @@ const App: React.FC = () => {
 
   const [activeView, setActiveView] = useState<AppView>('HOME');
   const [logs, setLogs] = useState<BabyLog[]>([]);
+  const logsRef = useRef<BabyLog[]>([]);
+  const [isGeneratingWeekly, setIsGeneratingWeekly] = useState(false);
+  
+  useEffect(() => {
+    logsRef.current = logs;
+  }, [logs]);
+
   const [isSleeping, setIsSleeping] = useState(false);
   const [sleepStartTime, setSleepStartTime] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(getLocalDateString(new Date()));
@@ -156,28 +165,58 @@ const App: React.FC = () => {
     });
 
     // 4. 訂閱週報並檢查是否需要彈出
-    const unsubscribeWeekly = subscribeToWeeklyReports((reports) => {
+    const unsubscribeWeekly = subscribeToWeeklyReports(async (reports) => {
+      // Calculate current week info
+      const birth = new Date(BIRTH_DATE);
+      const now = new Date();
+      const diffTime = now.getTime() - birth.getTime();
+      const weekNum = Math.floor(diffTime / (7 * 24 * 60 * 60 * 1000)) + 1;
+      const months = parseFloat((diffTime / (30.44 * 24 * 60 * 60 * 1000)).toFixed(1));
+      
+      // Check if it's Friday 8 PM
+      const dayOfWeek = now.getDay();
+      let thisFriday = new Date(now);
+      if (dayOfWeek <= 5) {
+        thisFriday.setDate(now.getDate() + (5 - dayOfWeek));
+      } else {
+        thisFriday.setDate(now.getDate() - (dayOfWeek - 5));
+      }
+      thisFriday.setHours(20, 0, 0, 0);
+      
+      const isFriday8PMReached = now >= thisFriday;
+
+      // Check if current week report exists
+      const currentReport = reports.find(r => r.weekNum === weekNum);
+
+      // Auto-generate if reached Friday 8 PM and no report for this week
+      if (isFriday8PMReached && !currentReport && !isGeneratingWeekly) {
+        console.log("Auto-generating weekly report...");
+        setIsGeneratingWeekly(true);
+        try {
+          const dateStr = now.toLocaleDateString('zh-HK', { year: 'numeric', month: 'long', day: 'numeric' });
+          const content = await generateWeeklyAIReport(logsRef.current, weekNum, months, dateStr);
+          
+          const reportId = `week-${weekNum}-${now.toISOString().split('T')[0]}`;
+          const newReport = {
+            id: reportId,
+            weekNum: weekNum,
+            dateRange: `${new Date(now.getTime() - 6 * 24 * 3600 * 1000).toLocaleDateString()} - ${now.toLocaleDateString()}`,
+            content,
+            createdAt: now.toISOString()
+          };
+          
+          await saveWeeklyReport(newReport);
+          // The subscription will trigger again with the new report
+        } catch (error) {
+          console.error("Auto-generation failed:", error);
+        } finally {
+          setIsGeneratingWeekly(false);
+        }
+      }
+
       if (reports.length > 0) {
         const latest = reports[0];
         
-        // Calculate current week info
-        const birth = new Date(BIRTH_DATE);
-        const now = new Date();
-        const diffTime = now.getTime() - birth.getTime();
-        const weekNum = Math.floor(diffTime / (7 * 24 * 60 * 60 * 1000)) + 1;
-        
-        // Check if it's Friday 8 PM
-        const dayOfWeek = now.getDay();
-        let thisFriday = new Date(now);
-        if (dayOfWeek <= 5) {
-          thisFriday.setDate(now.getDate() + (5 - dayOfWeek));
-        } else {
-          thisFriday.setDate(now.getDate() - (dayOfWeek - 5));
-        }
-        thisFriday.setHours(20, 0, 0, 0);
-        
-        const isFriday8PMReached = now >= thisFriday;
-
         // If report is for current week and it's past Friday 8 PM
         if (latest.weekNum === weekNum && isFriday8PMReached) {
           const lastSeenKey = `last_seen_report_${latest.id}`;
@@ -711,7 +750,7 @@ const App: React.FC = () => {
 
         {activeView === 'WEEKLY' && (
           <div className="space-y-6">
-            <WeeklyReport logs={logs} />
+            <WeeklyReport logs={logs} isGenerating={isGeneratingWeekly} />
           </div>
         )}
       </main>
