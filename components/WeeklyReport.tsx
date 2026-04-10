@@ -26,32 +26,27 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
     const birth = new Date(BIRTH_DATE);
     const now = new Date();
     
-    // Adjust to HKT (UTC+8) for calculation
-    const hktOffset = 8 * 60 * 60 * 1000;
-    const nowHKT = new Date(now.getTime() + hktOffset);
-    
     const diffTime = now.getTime() - birth.getTime();
     const weekNum = Math.floor(diffTime / (7 * 24 * 60 * 60 * 1000)) + 1;
     const months = parseFloat((diffTime / (30.44 * 24 * 60 * 60 * 1000)).toFixed(1));
     
-    // Find this week's Friday 8 PM HKT
-    const dayOfWeekHKT = nowHKT.getUTCDay(); // 0 (Sun) to 6 (Sat)
-    
-    let thisFridayHKT = new Date(nowHKT);
-    if (dayOfWeekHKT <= 5) {
-      thisFridayHKT.setUTCDate(nowHKT.getUTCDate() + (5 - dayOfWeekHKT));
-    } else {
-      thisFridayHKT.setUTCDate(nowHKT.getUTCDate() - (dayOfWeekHKT - 5));
-    }
-    thisFridayHKT.setUTCHours(20, 0, 0, 0);
+    // Calculate trigger time for current week (Friday 20:00 HKT)
+    const weekStartTime = birth.getTime() + (weekNum - 1) * 7 * 24 * 60 * 60 * 1000;
+    const thisFridayHKT = new Date(weekStartTime);
+    // 20:00 HKT is 12:00 UTC
+    thisFridayHKT.setUTCHours(12, 0, 0, 0);
 
-    const isFriday8PMReached = nowHKT >= thisFridayHKT;
+    const isFriday8PMReached = now.getTime() >= thisFridayHKT.getTime();
 
     // Calculate next report date
-    let nextFridayHKT = new Date(thisFridayHKT);
+    let nextFridayHKT = new Date(thisFridayHKT.getTime());
     if (isFriday8PMReached) {
-      nextFridayHKT.setUTCDate(thisFridayHKT.getUTCDate() + 7);
+      nextFridayHKT.setTime(thisFridayHKT.getTime() + 7 * 24 * 60 * 60 * 1000);
     }
+
+    // For display purposes in HKT
+    const hktOffset = 8 * 60 * 60 * 1000;
+    const nowHKT = new Date(now.getTime() + hktOffset);
 
     return { weekNum, months, isFriday8PMReached, thisFridayHKT, nextFridayHKT, nowHKT };
   }, []);

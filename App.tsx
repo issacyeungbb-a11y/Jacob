@@ -171,34 +171,37 @@ const App: React.FC = () => {
 
     // 4. 訂閱週報並檢查是否需要彈出
     const checkWeeklyReport = async (reports: WeeklyAIReport[]) => {
-      // Calculate current week info (using HKT for consistency)
+      // Calculate current week info
       const birth = new Date(BIRTH_DATE);
       const now = new Date();
-      // Adjust to HKT (UTC+8) for calculation
-      const hktOffset = 8 * 60 * 60 * 1000;
-      const nowHKT = new Date(now.getTime() + hktOffset);
       
       const diffTime = now.getTime() - birth.getTime();
       const weekNum = Math.floor(diffTime / (7 * 24 * 60 * 60 * 1000)) + 1;
       const months = parseFloat((diffTime / (30.44 * 24 * 60 * 60 * 1000)).toFixed(1));
       
-      // Check if it's Friday 8 PM HKT
-      // 20:00 HKT = 12:00 UTC
-      const dayOfWeekHKT = nowHKT.getUTCDay();
-      const hoursHKT = nowHKT.getUTCHours();
-      const isFridayPast8PM = (dayOfWeekHKT === 5 && hoursHKT >= 20) || dayOfWeekHKT === 6 || dayOfWeekHKT === 0;
-      // This covers Fri 8pm, Sat, Sun. 
-      // For Mon-Thu, it's false.
+      // Calculate the trigger time for the current week (Friday 20:00 HKT)
+      // Since Jacob was born on a Friday, each week starts on a Friday.
+      const weekStartTime = birth.getTime() + (weekNum - 1) * 7 * 24 * 60 * 60 * 1000;
+      const triggerTime = new Date(weekStartTime);
+      // 20:00 HKT is 12:00 UTC
+      triggerTime.setUTCHours(12, 0, 0, 0);
+
+      const isPastTrigger = now.getTime() >= triggerTime.getTime();
 
       // Check if current week report exists
       const currentReport = reports.find(r => r.weekNum === weekNum);
 
-      // Auto-generate if reached Friday 8 PM HKT and no report for this week
-      if (isFridayPast8PM && !currentReport && !isGeneratingRef.current) {
-        console.log(`[Auto-Gen] Starting generation for week ${weekNum}. isFridayPast8PM: ${isFridayPast8PM}`);
+      // Auto-generate if reached trigger time and no report for this week
+      if (isPastTrigger && !currentReport && !isGeneratingRef.current) {
+        console.log(`[Auto-Gen] Starting generation for week ${weekNum}. Trigger time: ${triggerTime.toISOString()}`);
         setIsGeneratingWeekly(true);
+        showToast(`正在自動為 Jacob 產生第 ${weekNum} 週週報...`);
+        
         try {
+          const hktOffset = 8 * 60 * 60 * 1000;
+          const nowHKT = new Date(now.getTime() + hktOffset);
           const dateStr = nowHKT.toLocaleDateString('zh-HK', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Hong_Kong' });
+          
           const content = await generateWeeklyAIReport(logsRef.current, weekNum, months, dateStr);
           
           if (!content || content.includes("無法產生週報")) {
@@ -215,9 +218,11 @@ const App: React.FC = () => {
           };
           
           await saveWeeklyReport(newReport);
+          showToast(`第 ${weekNum} 週週報已自動產生！✨`);
           console.log(`[Auto-Gen] Successfully saved report for week ${weekNum}`);
         } catch (error) {
           console.error("[Auto-Gen] Failed:", error instanceof Error ? error.message : String(error));
+          showToast("自動產生週報失敗，請稍後再試。");
         } finally {
           setIsGeneratingWeekly(false);
         }
@@ -225,7 +230,7 @@ const App: React.FC = () => {
 
       if (reports.length > 0) {
         const latest = reports[0];
-        if (latest.weekNum === weekNum && isFridayPast8PM) {
+        if (latest.weekNum === weekNum && isPastTrigger) {
           const lastSeenKey = `last_seen_report_${latest.id}`;
           if (!localStorage.getItem(lastSeenKey)) {
             setLatestReport(latest);
