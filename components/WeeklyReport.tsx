@@ -1,9 +1,9 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { BabyLog, LogType, FeedLog, SleepLog, DiaperLog, WeeklyAIReport } from '../types';
-import { Calendar, Milk, Moon, Baby, TrendingUp, Info, Sparkles, BrainCircuit, Loader2, ChevronRight, ChevronLeft, Clock } from 'lucide-react';
+import { Calendar, Milk, Moon, Baby, TrendingUp, Info, Sparkles, BrainCircuit, Loader2, ChevronRight, ChevronLeft, Clock, Trash2 } from 'lucide-react';
 import { BIRTH_DATE, BABY_NAME } from '../constants';
 import { generateWeeklyAIReport, generateBabyInsights } from '../services/geminiService';
-import { saveWeeklyReport, subscribeToWeeklyReports } from '../services/storageService';
+import { saveWeeklyReport, subscribeToWeeklyReports, deleteWeeklyReport } from '../services/storageService';
 import ReactMarkdown from 'react-markdown';
 
 interface WeeklyReportProps {
@@ -90,6 +90,20 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
     }
   };
 
+  const handleDeleteReport = async (reportId: string) => {
+    if (!confirm("確定要刪除這份週報嗎？刪除後可以重新產生。")) return;
+    
+    try {
+      await deleteWeeklyReport(reportId);
+      if (selectedReportId === reportId) {
+        setSelectedReportId(null);
+      }
+    } catch (error) {
+      console.error("Delete report failed:", error instanceof Error ? error.message : String(error));
+      alert("刪除失敗，請稍後再試。");
+    }
+  };
+
   const handleRefresh = () => {
     window.location.reload();
   };
@@ -97,6 +111,17 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
   const selectedReport = useMemo(() => {
     return weeklyReports.find(r => r.id === selectedReportId) || (weeklyReports.length > 0 ? weeklyReports[0] : null);
   }, [weeklyReports, selectedReportId]);
+
+  // Determine if we need to show the generate button
+  const hasValidReportForCurrentWeek = useMemo(() => {
+    const report = weeklyReports.find(r => r.weekNum === currentWeekInfo.weekNum);
+    if (!report) return false;
+    // If report exists but contains error message, consider it invalid
+    if (report.content.includes("無法產生週報") || report.content.includes("系統設定錯誤")) {
+      return false;
+    }
+    return true;
+  }, [weeklyReports, currentWeekInfo.weekNum]);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -148,7 +173,7 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
         )}
 
         {/* Manual Generate Fallback */}
-        {!weeklyReports.some(r => r.weekNum === currentWeekInfo.weekNum) && !isGenerating && !localIsGenerating && (
+        {!hasValidReportForCurrentWeek && !isGenerating && !localIsGenerating && (
           <div className="bg-indigo-50 rounded-3xl p-6 border border-indigo-100 text-center space-y-4 shadow-sm">
             <div className="space-y-2">
               <p className="font-black text-indigo-900 text-lg">第 {currentWeekInfo.weekNum} 週週報</p>
@@ -232,35 +257,42 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
           <div className="space-y-4">
             <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden animate-fade-in">
               <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">第 {selectedReport.weekNum} 週報告</p>
-                  <p className="text-xs font-bold text-gray-600">{selectedReport.dateRange}</p>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-1">
+                    <button 
+                      onClick={() => {
+                        const idx = weeklyReports.findIndex(r => r.id === selectedReportId);
+                        if (idx > 0) setSelectedReportId(weeklyReports[idx-1].id);
+                      }}
+                      disabled={weeklyReports.findIndex(r => r.id === selectedReportId) === 0}
+                      className="p-1 hover:bg-gray-200 rounded-full disabled:opacity-30 transition-colors"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => {
+                        const idx = weeklyReports.findIndex(r => r.id === selectedReportId);
+                        if (idx < weeklyReports.length - 1) setSelectedReportId(weeklyReports[idx+1].id);
+                      }}
+                      disabled={weeklyReports.findIndex(r => r.id === selectedReportId) === weeklyReports.length - 1}
+                      className="p-1 hover:bg-gray-200 rounded-full disabled:opacity-30 transition-colors"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">第 {selectedReport.weekNum} 週報告</p>
+                    <p className="text-xs font-bold text-gray-600">{selectedReport.dateRange}</p>
+                  </div>
                 </div>
                 <div className="flex gap-2">
-                  {weeklyReports.length > 1 && (
-                    <div className="flex items-center gap-1">
-                      <button 
-                        onClick={() => {
-                          const idx = weeklyReports.findIndex(r => r.id === selectedReport.id);
-                          if (idx < weeklyReports.length - 1) setSelectedReportId(weeklyReports[idx + 1].id);
-                        }}
-                        disabled={weeklyReports.findIndex(r => r.id === selectedReport.id) === weeklyReports.length - 1}
-                        className="p-2 hover:bg-gray-200 rounded-full disabled:opacity-30 transition-colors"
-                      >
-                        <ChevronLeft className="w-5 h-5" />
-                      </button>
-                      <button 
-                        onClick={() => {
-                          const idx = weeklyReports.findIndex(r => r.id === selectedReport.id);
-                          if (idx > 0) setSelectedReportId(weeklyReports[idx - 1].id);
-                        }}
-                        disabled={weeklyReports.findIndex(r => r.id === selectedReport.id) === 0}
-                        className="p-2 hover:bg-gray-200 rounded-full disabled:opacity-30 transition-colors"
-                      >
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
-                    </div>
-                  )}
+                  <button 
+                    onClick={() => handleDeleteReport(selectedReport.id)}
+                    className="p-2 text-gray-300 hover:text-red-500 transition-colors"
+                    title="刪除此報告"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
               <div className="p-6 prose prose-sm max-w-none prose-headings:text-indigo-900 prose-headings:font-black prose-p:text-gray-700 prose-p:leading-relaxed prose-li:text-gray-700">

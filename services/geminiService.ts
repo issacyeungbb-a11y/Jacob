@@ -157,8 +157,12 @@ export const generateWeeklyAIReport = async (
       contents: prompt,
     });
     return response.text || "目前無法產生週報。";
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error generating weekly report:", error);
-    return "抱歉，目前無法產生週報。請檢查您的網路連線或 API Key 設定。";
+    const errorMsg = error?.message || "";
+    if (errorMsg.includes("API_KEY_INVALID")) {
+      return "錯誤：API Key 無效，請檢查您在 Vercel 設定的數值是否正確。";
+    }
+    return `抱歉，目前無法產生週報。原因：${errorMsg || "網路連線或 API 設定問題"}`;
   }
 };

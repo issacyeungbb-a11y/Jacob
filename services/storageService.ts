@@ -40,6 +40,16 @@ export const saveWeeklyReport = async (report: WeeklyAIReport) => {
   }
 };
 
+// 刪除週報
+export const deleteWeeklyReport = async (reportId: string) => {
+  try {
+    await deleteDoc(doc(db, WEEKLY_REPORTS_COLLECTION, reportId));
+  } catch (e) {
+    console.error("Error deleting weekly report:", e);
+    throw e;
+  }
+};
+
 // 監聽資料庫變更 (即時同步)
 export const subscribeToLogs = (onUpdate: (logs: BabyLog[]) => void, onError?: (error: any) => void) => {
   // 使用 Modular SDK 的 query 和 collection
