@@ -151,7 +151,7 @@ const App: React.FC = () => {
             setError(null);
         },
         (err) => {
-            console.error(err);
+            console.error("Firebase sync error:", err instanceof Error ? err.message : String(err));
             setError("無法連結資料庫，請檢查權限或網絡。");
             setIsLoading(false);
         }
@@ -217,7 +217,7 @@ const App: React.FC = () => {
           await saveWeeklyReport(newReport);
           console.log(`[Auto-Gen] Successfully saved report for week ${weekNum}`);
         } catch (error) {
-          console.error("[Auto-Gen] Failed:", error);
+          console.error("[Auto-Gen] Failed:", error instanceof Error ? error.message : String(error));
         } finally {
           setIsGeneratingWeekly(false);
         }
@@ -444,11 +444,11 @@ const App: React.FC = () => {
             await uploadProfilePhotoToCloud(compressedBase64);
             // 狀態更新會由 subscribeToProfilePhoto 自動處理
         } catch (storageErr) {
-            console.error(storageErr);
+            console.error("Storage error:", storageErr instanceof Error ? storageErr.message : String(storageErr));
             alert("上傳失敗：請檢查網路連線。");
         }
     } catch (err) {
-        console.error("Compression error:", err);
+        console.error("Compression error:", err instanceof Error ? err.message : String(err));
         alert("圖片處理失敗，請重試。");
     } finally {
         setIsProcessingImg(false);

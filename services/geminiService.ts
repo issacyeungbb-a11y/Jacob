@@ -32,13 +32,13 @@ export const generateBabyInsights = async (logs: BabyLog[]): Promise<string> => 
     
     這是過去 7 天的記錄摘要 (JSON 格式):
     ${JSON.stringify(recentLogs.map(l => ({
-      type: l.type,
-      time: l.timestamp,
+      type: String(l.type || ''),
+      time: String(l.timestamp || ''),
       details: l.type === LogType.FEED ? `${(l as any).amountMl}ml` : 
                l.type === LogType.HEALTH ? `重:${(l as any).weightKg}kg` : 
                l.type === LogType.SLEEP ? `${(l as any).durationMinutes}分` : 
-               l.type === LogType.OTHER ? `${(l as any).details}` :
-               (l as any).status
+               l.type === LogType.OTHER ? String((l as any).details || '') :
+               String((l as any).status || '')
     })))}
 
     請提供一份簡短且令人安心的繁體中文摘要 (最多 3 點)，重點關注：
@@ -93,13 +93,13 @@ export const generateWeeklyAIReport = async (
   const recentLogs = logs.filter(log => new Date(log.timestamp) > sevenDaysAgo);
 
   const logSummary = JSON.stringify(recentLogs.map(l => ({
-    type: l.type,
-    time: l.timestamp,
+    type: String(l.type || ''),
+    time: String(l.timestamp || ''),
     details: l.type === LogType.FEED ? `${(l as any).amountMl}ml` : 
              l.type === LogType.HEALTH ? `重:${(l as any).weightKg}kg` : 
              l.type === LogType.SLEEP ? `${(l as any).durationMinutes}分` : 
-             l.type === LogType.OTHER ? `${(l as any).details}` :
-             (l as any).status
+             l.type === LogType.OTHER ? String((l as any).details || '') :
+             String((l as any).status || '')
   })));
 
   const prompt = `
@@ -153,7 +153,7 @@ export const generateWeeklyAIReport = async (
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3.1-pro-preview',
+      model: 'gemini-3-flash-preview',
       contents: prompt,
     });
     return response.text || "目前無法產生週報。";

@@ -83,7 +83,7 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
       setSelectedReportId(reportId);
       console.log("Manual generation successful:", reportId);
     } catch (error) {
-      console.error("Manual generation failed:", error);
+      console.error("Manual generation failed:", error instanceof Error ? error.message : String(error));
       alert("產生週報失敗，請檢查網路連線或稍後再試。");
     } finally {
       setLocalIsGenerating(false);
@@ -132,7 +132,7 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
             歷史週報
           </h3>
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-100 px-2 py-1 rounded-full">
-            Gemini 3.1 Pro
+            Gemini 3 Flash
           </span>
         </div>
 
@@ -268,7 +268,7 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
               </div>
               <div className="bg-gray-50 px-6 py-4 border-t border-gray-100 text-center">
                 <p className="text-[10px] text-gray-400 font-medium italic">
-                  此報告由 Gemini 3.1 Pro 生成，僅供參考。如有醫療疑問請諮詢專業醫生。
+                  此報告由 Gemini 3 Flash 生成，僅供參考。如有醫療疑問請諮詢專業醫生。
                 </p>
               </div>
             </div>

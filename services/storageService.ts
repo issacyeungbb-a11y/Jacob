@@ -162,7 +162,20 @@ export const updateLogInCloud = async (log: BabyLog) => {
 
 // 匯出備份 (保留功能)
 export const exportLogsToJSON = (logs: BabyLog[]) => {
-  const dataStr = JSON.stringify(logs, null, 2);
+  const getCircularReplacer = () => {
+    const seen = new WeakSet();
+    return (key: string, value: any) => {
+      if (typeof value === "object" && value !== null) {
+        if (seen.has(value)) {
+          return "[Circular]";
+        }
+        seen.add(value);
+      }
+      return value;
+    };
+  };
+
+  const dataStr = JSON.stringify(logs, getCircularReplacer(), 2);
   const blob = new Blob([dataStr], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
