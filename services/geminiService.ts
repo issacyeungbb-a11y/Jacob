@@ -51,7 +51,7 @@ export const generateBabyInsights = async (logs: BabyLog[]): Promise<string> => 
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3.1-pro-preview',
       contents: prompt,
     });
     return response.text || "目前無法產生分析報告。";
@@ -60,6 +60,9 @@ export const generateBabyInsights = async (logs: BabyLog[]): Promise<string> => 
     const errorMsg = error?.message || "";
     if (errorMsg.includes("API_KEY_INVALID")) {
       return "錯誤：API Key 無效，請檢查您在 Vercel 設定的數值是否正確。";
+    }
+    if (errorMsg.includes("503") || errorMsg.includes("UNAVAILABLE")) {
+      return "抱歉，AI 伺服器目前太過繁忙（503 錯誤）。這通常是暫時性的，請等幾分鐘後再按一次「立即產生週報」。";
     }
     return `抱歉，目前無法產生分析。原因：${errorMsg || "網路連線或 API 設定問題"}`;
   }
@@ -153,7 +156,7 @@ export const generateWeeklyAIReport = async (
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3.1-pro-preview',
       contents: prompt,
     });
     return response.text || "目前無法產生週報。";
@@ -162,6 +165,9 @@ export const generateWeeklyAIReport = async (
     const errorMsg = error?.message || "";
     if (errorMsg.includes("API_KEY_INVALID")) {
       return "錯誤：API Key 無效，請檢查您在 Vercel 設定的數值是否正確。";
+    }
+    if (errorMsg.includes("503") || errorMsg.includes("UNAVAILABLE")) {
+      return "抱歉，AI 伺服器目前太過繁忙（503 錯誤）。這通常是暫時性的，請等幾分鐘後再按一次「立即產生週報」。";
     }
     return `抱歉，目前無法產生週報。原因：${errorMsg || "網路連線或 API 設定問題"}`;
   }
