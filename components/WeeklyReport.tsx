@@ -15,6 +15,7 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
   const [weeklyReports, setWeeklyReports] = useState<WeeklyAIReport[]>([]);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [localIsGenerating, setLocalIsGenerating] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
 
   useEffect(() => {
     const unsubscribe = subscribeToWeeklyReports(setWeeklyReports);
@@ -52,7 +53,7 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
       nextFridayHKT.setUTCDate(thisFridayHKT.getUTCDate() + 7);
     }
 
-    return { weekNum, months, isFriday8PMReached, thisFridayHKT, nextFridayHKT };
+    return { weekNum, months, isFriday8PMReached, thisFridayHKT, nextFridayHKT, nowHKT };
   }, []);
 
   const handleManualGenerate = async () => {
@@ -80,12 +81,17 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
       
       await saveWeeklyReport(newReport);
       setSelectedReportId(reportId);
+      console.log("Manual generation successful:", reportId);
     } catch (error) {
       console.error("Manual generation failed:", error);
-      alert("產生週報失敗，請稍後再試。");
+      alert("產生週報失敗，請檢查網路連線或稍後再試。");
     } finally {
       setLocalIsGenerating(false);
     }
+  };
+
+  const handleRefresh = () => {
+    window.location.reload();
   };
 
   const selectedReport = useMemo(() => {
@@ -141,20 +147,69 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
           </div>
         )}
 
-        {/* Manual Generate Fallback if report is missing and time is reached */}
-        {currentWeekInfo.isFriday8PMReached && !weeklyReports.some(r => r.weekNum === currentWeekInfo.weekNum) && !isGenerating && !localIsGenerating && (
-          <div className="bg-indigo-50 rounded-3xl p-6 border border-indigo-100 text-center space-y-4">
+        {/* Manual Generate Fallback */}
+        {!weeklyReports.some(r => r.weekNum === currentWeekInfo.weekNum) && !isGenerating && !localIsGenerating && (
+          <div className="bg-indigo-50 rounded-3xl p-6 border border-indigo-100 text-center space-y-4 shadow-sm">
             <div className="space-y-2">
-              <p className="font-black text-indigo-900">第 {currentWeekInfo.weekNum} 週週報已準備就緒</p>
-              <p className="text-xs text-indigo-600">如果系統未自動顯示，您可以點擊下方按鈕手動產生。</p>
+              <p className="font-black text-indigo-900 text-lg">第 {currentWeekInfo.weekNum} 週週報</p>
+              <p className="text-xs text-indigo-600 font-medium">
+                {currentWeekInfo.isFriday8PMReached 
+                  ? "Jacob 的本週深度分析已準備就緒。" 
+                  : `系統預計於週五 20:00 自動產生。如果您現在需要，也可以手動提前產生。`}
+              </p>
             </div>
-            <button
-              onClick={handleManualGenerate}
-              className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-full shadow-lg shadow-indigo-100 flex items-center gap-2 mx-auto active:scale-95 transition-all"
-            >
-              <BrainCircuit className="w-5 h-5" />
-              立即產生週報
-            </button>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={handleManualGenerate}
+                className="px-8 py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-200 flex items-center justify-center gap-3 mx-auto active:scale-95 transition-all w-full max-w-xs"
+              >
+                <BrainCircuit className="w-6 h-6" />
+                立即產生週報
+              </button>
+              <button 
+                onClick={handleRefresh}
+                className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest hover:text-indigo-600 transition-colors"
+              >
+                重新整理頁面
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Debug Info Toggle */}
+        <div className="flex justify-center">
+          <button 
+            onClick={() => setShowDebug(!showDebug)}
+            className="text-[9px] text-gray-300 font-bold uppercase tracking-widest hover:text-gray-500 transition-colors"
+          >
+            {showDebug ? "隱藏系統資訊" : "顯示系統資訊"}
+          </button>
+        </div>
+
+        {showDebug && (
+          <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 font-mono text-[10px] text-gray-500 space-y-1">
+            <div className="flex justify-between border-b border-gray-100 pb-1">
+              <span>系統時間 (HKT)</span>
+              <span className="text-gray-900">{currentWeekInfo.nowHKT.toLocaleString('zh-HK')}</span>
+            </div>
+            <div className="flex justify-between border-b border-gray-100 pb-1">
+              <span>當前週數</span>
+              <span className="text-gray-900">{currentWeekInfo.weekNum}</span>
+            </div>
+            <div className="flex justify-between border-b border-gray-100 pb-1">
+              <span>本週解鎖時間 (HKT)</span>
+              <span className="text-gray-900">{currentWeekInfo.thisFridayHKT.toLocaleString('zh-HK')}</span>
+            </div>
+            <div className="flex justify-between border-b border-gray-100 pb-1">
+              <span>是否已達解鎖時間</span>
+              <span className={currentWeekInfo.isFriday8PMReached ? "text-green-600 font-bold" : "text-amber-600"}>
+                {currentWeekInfo.isFriday8PMReached ? "YES" : "NO"}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span>已儲存報告數量</span>
+              <span className="text-gray-900">{weeklyReports.length}</span>
+            </div>
           </div>
         )}
 

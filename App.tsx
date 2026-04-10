@@ -184,15 +184,6 @@ const App: React.FC = () => {
       
       // Check if it's Friday 8 PM HKT
       // 20:00 HKT = 12:00 UTC
-      const nowUTC = now.getUTCHours();
-      const dayOfWeekUTC = now.getUTCDay(); // 0 (Sun) to 6 (Sat)
-      
-      // Simplified check: Is it Friday (UTC day 5) and >= 12:00 UTC?
-      // Or is it Saturday (UTC day 6)?
-      const isFriday8PMReached = (dayOfWeekUTC === 5 && nowUTC >= 12) || dayOfWeekUTC > 5 || dayOfWeekUTC < 5; 
-      // Wait, "dayOfWeekUTC < 5" is wrong. If it's Monday, it's not "past Friday 8 PM" of the current week.
-      
-      // Let's use a more robust HKT check
       const dayOfWeekHKT = nowHKT.getUTCDay();
       const hoursHKT = nowHKT.getUTCHours();
       const isFridayPast8PM = (dayOfWeekHKT === 5 && hoursHKT >= 20) || dayOfWeekHKT === 6 || dayOfWeekHKT === 0;
