@@ -14,6 +14,7 @@ interface WeeklyReportProps {
 export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating = false }) => {
   const [weeklyReports, setWeeklyReports] = useState<WeeklyAIReport[]>([]);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
+  const [localIsGenerating, setLocalIsGenerating] = useState(false);
 
   useEffect(() => {
     const unsubscribe = subscribeToWeeklyReports(setWeeklyReports);
@@ -23,34 +24,69 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
   const currentWeekInfo = useMemo(() => {
     const birth = new Date(BIRTH_DATE);
     const now = new Date();
+    
+    // Adjust to HKT (UTC+8) for calculation
+    const hktOffset = 8 * 60 * 60 * 1000;
+    const nowHKT = new Date(now.getTime() + hktOffset);
+    
     const diffTime = now.getTime() - birth.getTime();
     const weekNum = Math.floor(diffTime / (7 * 24 * 60 * 60 * 1000)) + 1;
     const months = parseFloat((diffTime / (30.44 * 24 * 60 * 60 * 1000)).toFixed(1));
     
-    // Find this week's Friday 8 PM
-    const today = new Date();
-    const dayOfWeek = today.getDay(); // 0 (Sun) to 6 (Sat)
+    // Find this week's Friday 8 PM HKT
+    const dayOfWeekHKT = nowHKT.getUTCDay(); // 0 (Sun) to 6 (Sat)
     
-    let thisFriday = new Date(today);
-    if (dayOfWeek <= 5) {
-      // Mon-Fri
-      thisFriday.setDate(today.getDate() + (5 - dayOfWeek));
+    let thisFridayHKT = new Date(nowHKT);
+    if (dayOfWeekHKT <= 5) {
+      thisFridayHKT.setUTCDate(nowHKT.getUTCDate() + (5 - dayOfWeekHKT));
     } else {
-      // Sat
-      thisFriday.setDate(today.getDate() - (dayOfWeek - 5));
+      thisFridayHKT.setUTCDate(nowHKT.getUTCDate() - (dayOfWeekHKT - 5));
     }
-    thisFriday.setHours(20, 0, 0, 0);
+    thisFridayHKT.setUTCHours(20, 0, 0, 0);
 
-    const isFriday8PMReached = today >= thisFriday;
+    const isFriday8PMReached = nowHKT >= thisFridayHKT;
 
     // Calculate next report date
-    let nextFriday = new Date(thisFriday);
+    let nextFridayHKT = new Date(thisFridayHKT);
     if (isFriday8PMReached) {
-      nextFriday.setDate(thisFriday.getDate() + 7);
+      nextFridayHKT.setUTCDate(thisFridayHKT.getUTCDate() + 7);
     }
 
-    return { weekNum, months, isFriday8PMReached, thisFriday, nextFriday };
+    return { weekNum, months, isFriday8PMReached, thisFridayHKT, nextFridayHKT };
   }, []);
+
+  const handleManualGenerate = async () => {
+    if (localIsGenerating || isGenerating) return;
+    setLocalIsGenerating(true);
+    try {
+      const dateStr = new Date().toLocaleDateString('zh-HK', { 
+        year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Hong_Kong' 
+      });
+      const content = await generateWeeklyAIReport(
+        logs, 
+        currentWeekInfo.weekNum, 
+        currentWeekInfo.months, 
+        dateStr
+      );
+      
+      const reportId = `week-${currentWeekInfo.weekNum}-${new Date().toISOString().split('T')[0]}`;
+      const newReport: WeeklyAIReport = {
+        id: reportId,
+        weekNum: currentWeekInfo.weekNum,
+        dateRange: `${new Date(Date.now() - 6 * 24 * 3600 * 1000).toLocaleDateString('zh-HK')} - ${new Date().toLocaleDateString('zh-HK')}`,
+        content,
+        createdAt: new Date().toISOString()
+      };
+      
+      await saveWeeklyReport(newReport);
+      setSelectedReportId(reportId);
+    } catch (error) {
+      console.error("Manual generation failed:", error);
+      alert("產生週報失敗，請稍後再試。");
+    } finally {
+      setLocalIsGenerating(false);
+    }
+  };
 
   const selectedReport = useMemo(() => {
     return weeklyReports.find(r => r.id === selectedReportId) || (weeklyReports.length > 0 ? weeklyReports[0] : null);
@@ -75,7 +111,7 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
               <Clock className="w-3 h-3 text-amber-300" />
               <span className="text-[10px] font-bold tracking-wider uppercase">
-                下次更新：{currentWeekInfo.nextFriday.toLocaleDateString('zh-HK', { month: 'short', day: 'numeric' })} 20:00
+                下次更新：{currentWeekInfo.nextFridayHKT.getUTCMonth() + 1}月{currentWeekInfo.nextFridayHKT.getUTCDate()}日 20:00
               </span>
             </div>
           </div>
@@ -95,13 +131,30 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
         </div>
 
         {/* Loading State for Auto-generation */}
-        {isGenerating && (
+        {(isGenerating || localIsGenerating) && (
           <div className="bg-white rounded-3xl p-8 text-center border border-indigo-100 shadow-sm space-y-4 animate-pulse">
             <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto" />
             <div className="space-y-2">
               <p className="font-black text-indigo-900">正在為 Jacob 編寫第 {currentWeekInfo.weekNum} 週週報</p>
               <p className="text-xs text-gray-500">AI 正在分析本週數據，請稍候...</p>
             </div>
+          </div>
+        )}
+
+        {/* Manual Generate Fallback if report is missing and time is reached */}
+        {currentWeekInfo.isFriday8PMReached && !weeklyReports.some(r => r.weekNum === currentWeekInfo.weekNum) && !isGenerating && !localIsGenerating && (
+          <div className="bg-indigo-50 rounded-3xl p-6 border border-indigo-100 text-center space-y-4">
+            <div className="space-y-2">
+              <p className="font-black text-indigo-900">第 {currentWeekInfo.weekNum} 週週報已準備就緒</p>
+              <p className="text-xs text-indigo-600">如果系統未自動顯示，您可以點擊下方按鈕手動產生。</p>
+            </div>
+            <button
+              onClick={handleManualGenerate}
+              className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-full shadow-lg shadow-indigo-100 flex items-center gap-2 mx-auto active:scale-95 transition-all"
+            >
+              <BrainCircuit className="w-5 h-5" />
+              立即產生週報
+            </button>
           </div>
         )}
 
@@ -113,7 +166,7 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
               <p className="font-black text-amber-800">首份週報編寫中</p>
               <p className="text-xs text-amber-600 leading-relaxed">
                 Jacob 的第一份 AI 深度週報將於以下時間解鎖：<br/>
-                <span className="font-black text-amber-700">{currentWeekInfo.thisFriday.toLocaleString('zh-HK', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                <span className="font-black text-amber-700">{currentWeekInfo.thisFridayHKT.getUTCMonth() + 1}月{currentWeekInfo.thisFridayHKT.getUTCDate()}日 20:00</span>
               </p>
             </div>
           </div>
@@ -172,7 +225,7 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
                   <Clock className="w-4 h-4 text-indigo-600" />
                 </div>
                 <p className="text-xs text-indigo-800 font-medium">
-                  下一份週報將於 <span className="font-bold">{currentWeekInfo.thisFriday.toLocaleDateString('zh-HK', { month: 'long', day: 'numeric' })} 20:00</span> 自動產生。
+                  下一份週報將於 <span className="font-bold">{currentWeekInfo.thisFridayHKT.getUTCMonth() + 1}月{currentWeekInfo.thisFridayHKT.getUTCDate()}日 20:00</span> 自動產生。
                 </p>
               </div>
             )}

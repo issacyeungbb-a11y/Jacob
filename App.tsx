@@ -102,10 +102,15 @@ const App: React.FC = () => {
   const [logs, setLogs] = useState<BabyLog[]>([]);
   const logsRef = useRef<BabyLog[]>([]);
   const [isGeneratingWeekly, setIsGeneratingWeekly] = useState(false);
+  const isGeneratingRef = useRef(false);
   
   useEffect(() => {
     logsRef.current = logs;
   }, [logs]);
+
+  useEffect(() => {
+    isGeneratingRef.current = isGeneratingWeekly;
+  }, [isGeneratingWeekly]);
 
   const [isSleeping, setIsSleeping] = useState(false);
   const [sleepStartTime, setSleepStartTime] = useState<string | null>(null);
@@ -165,50 +170,63 @@ const App: React.FC = () => {
     });
 
     // 4. 訂閱週報並檢查是否需要彈出
-    const unsubscribeWeekly = subscribeToWeeklyReports(async (reports) => {
-      // Calculate current week info
+    const checkWeeklyReport = async (reports: WeeklyAIReport[]) => {
+      // Calculate current week info (using HKT for consistency)
       const birth = new Date(BIRTH_DATE);
       const now = new Date();
+      // Adjust to HKT (UTC+8) for calculation
+      const hktOffset = 8 * 60 * 60 * 1000;
+      const nowHKT = new Date(now.getTime() + hktOffset);
+      
       const diffTime = now.getTime() - birth.getTime();
       const weekNum = Math.floor(diffTime / (7 * 24 * 60 * 60 * 1000)) + 1;
       const months = parseFloat((diffTime / (30.44 * 24 * 60 * 60 * 1000)).toFixed(1));
       
-      // Check if it's Friday 8 PM
-      const dayOfWeek = now.getDay();
-      let thisFriday = new Date(now);
-      if (dayOfWeek <= 5) {
-        thisFriday.setDate(now.getDate() + (5 - dayOfWeek));
-      } else {
-        thisFriday.setDate(now.getDate() - (dayOfWeek - 5));
-      }
-      thisFriday.setHours(20, 0, 0, 0);
+      // Check if it's Friday 8 PM HKT
+      // 20:00 HKT = 12:00 UTC
+      const nowUTC = now.getUTCHours();
+      const dayOfWeekUTC = now.getUTCDay(); // 0 (Sun) to 6 (Sat)
       
-      const isFriday8PMReached = now >= thisFriday;
+      // Simplified check: Is it Friday (UTC day 5) and >= 12:00 UTC?
+      // Or is it Saturday (UTC day 6)?
+      const isFriday8PMReached = (dayOfWeekUTC === 5 && nowUTC >= 12) || dayOfWeekUTC > 5 || dayOfWeekUTC < 5; 
+      // Wait, "dayOfWeekUTC < 5" is wrong. If it's Monday, it's not "past Friday 8 PM" of the current week.
+      
+      // Let's use a more robust HKT check
+      const dayOfWeekHKT = nowHKT.getUTCDay();
+      const hoursHKT = nowHKT.getUTCHours();
+      const isFridayPast8PM = (dayOfWeekHKT === 5 && hoursHKT >= 20) || dayOfWeekHKT === 6 || dayOfWeekHKT === 0;
+      // This covers Fri 8pm, Sat, Sun. 
+      // For Mon-Thu, it's false.
 
       // Check if current week report exists
       const currentReport = reports.find(r => r.weekNum === weekNum);
 
-      // Auto-generate if reached Friday 8 PM and no report for this week
-      if (isFriday8PMReached && !currentReport && !isGeneratingWeekly) {
-        console.log("Auto-generating weekly report...");
+      // Auto-generate if reached Friday 8 PM HKT and no report for this week
+      if (isFridayPast8PM && !currentReport && !isGeneratingRef.current) {
+        console.log(`[Auto-Gen] Starting generation for week ${weekNum}. isFridayPast8PM: ${isFridayPast8PM}`);
         setIsGeneratingWeekly(true);
         try {
-          const dateStr = now.toLocaleDateString('zh-HK', { year: 'numeric', month: 'long', day: 'numeric' });
+          const dateStr = nowHKT.toLocaleDateString('zh-HK', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Hong_Kong' });
           const content = await generateWeeklyAIReport(logsRef.current, weekNum, months, dateStr);
           
-          const reportId = `week-${weekNum}-${now.toISOString().split('T')[0]}`;
+          if (!content || content.includes("無法產生週報")) {
+            throw new Error("AI returned empty or error content");
+          }
+
+          const reportId = `week-${weekNum}-${nowHKT.toISOString().split('T')[0]}`;
           const newReport = {
             id: reportId,
             weekNum: weekNum,
-            dateRange: `${new Date(now.getTime() - 6 * 24 * 3600 * 1000).toLocaleDateString()} - ${now.toLocaleDateString()}`,
+            dateRange: `${new Date(now.getTime() - 6 * 24 * 3600 * 1000).toLocaleDateString('zh-HK')} - ${now.toLocaleDateString('zh-HK')}`,
             content,
             createdAt: now.toISOString()
           };
           
           await saveWeeklyReport(newReport);
-          // The subscription will trigger again with the new report
+          console.log(`[Auto-Gen] Successfully saved report for week ${weekNum}`);
         } catch (error) {
-          console.error("Auto-generation failed:", error);
+          console.error("[Auto-Gen] Failed:", error);
         } finally {
           setIsGeneratingWeekly(false);
         }
@@ -216,9 +234,7 @@ const App: React.FC = () => {
 
       if (reports.length > 0) {
         const latest = reports[0];
-        
-        // If report is for current week and it's past Friday 8 PM
-        if (latest.weekNum === weekNum && isFriday8PMReached) {
+        if (latest.weekNum === weekNum && isFridayPast8PM) {
           const lastSeenKey = `last_seen_report_${latest.id}`;
           if (!localStorage.getItem(lastSeenKey)) {
             setLatestReport(latest);
@@ -226,13 +242,25 @@ const App: React.FC = () => {
           }
         }
       }
+    };
+
+    let currentReports: WeeklyAIReport[] = [];
+    const unsubscribeWeekly = subscribeToWeeklyReports(async (reports) => {
+      currentReports = reports;
+      await checkWeeklyReport(reports);
     });
+
+    // Periodic check every 5 minutes
+    const interval = setInterval(() => {
+      checkWeeklyReport(currentReports);
+    }, 5 * 60 * 1000);
 
     return () => {
       unsubscribeLogs();
       unsubscribeSleep();
       unsubscribePhoto();
       unsubscribeWeekly();
+      clearInterval(interval);
       clearTimeout(timeout);
     };
   }, []);
