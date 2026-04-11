@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { BabyLog, LogType, FeedLog, SleepLog, DiaperLog, WeeklyAIReport } from '../types';
-import { Calendar, Milk, Moon, Baby, TrendingUp, Info, Sparkles, BrainCircuit, Loader2, ChevronRight, ChevronLeft, Clock, Trash2 } from 'lucide-react';
+import { Calendar, Milk, Moon, Baby, TrendingUp, Info, Sparkles, BrainCircuit, Loader2, ChevronRight, ChevronLeft, Clock, Trash2, RefreshCw } from 'lucide-react';
 import { BIRTH_DATE, BABY_NAME } from '../constants';
 import { generateWeeklyAIReport, generateBabyInsights } from '../services/geminiService';
 import { saveWeeklyReport, subscribeToWeeklyReports, deleteWeeklyReport } from '../services/storageService';
@@ -16,11 +16,27 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [localIsGenerating, setLocalIsGenerating] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
+  const [shortInsights, setShortInsights] = useState<string | null>(null);
+  const [isGeneratingInsights, setIsGeneratingInsights] = useState(false);
 
   useEffect(() => {
     const unsubscribe = subscribeToWeeklyReports(setWeeklyReports);
     return () => unsubscribe();
   }, []);
+
+  const handleGenerateShortInsights = async () => {
+    if (isGeneratingInsights) return;
+    setIsGeneratingInsights(true);
+    try {
+      const insights = await generateBabyInsights(logs);
+      setShortInsights(insights);
+    } catch (error) {
+      console.error("Generate insights failed:", error);
+      alert("產生分析失敗，請稍後再試。");
+    } finally {
+      setIsGeneratingInsights(false);
+    }
+  };
 
   const currentWeekInfo = useMemo(() => {
     const birth = new Date(BIRTH_DATE);
@@ -167,34 +183,72 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
           </div>
         )}
 
-        {/* Manual Generate Fallback */}
-        {!hasValidReportForCurrentWeek && !isGenerating && !localIsGenerating && (
+        {/* AI Insights & Manual Generate Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Short Insights Button */}
+          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="bg-amber-100 p-2 rounded-xl">
+                <Sparkles className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h4 className="font-black text-gray-800 text-sm">AI 快速分析</h4>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">即時數據洞察</p>
+              </div>
+            </div>
+            
+            {shortInsights ? (
+              <div className="bg-amber-50/50 rounded-2xl p-4 text-xs text-gray-700 leading-relaxed border border-amber-100/50 animate-fade-in">
+                <ReactMarkdown>{shortInsights}</ReactMarkdown>
+                <button 
+                  onClick={handleGenerateShortInsights}
+                  className="mt-3 text-[10px] font-black text-amber-600 uppercase tracking-widest flex items-center gap-1 hover:text-amber-700 transition-colors"
+                >
+                  <RefreshCw className="w-3 h-3" /> 重新分析
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleGenerateShortInsights}
+                disabled={isGeneratingInsights}
+                className="w-full py-4 bg-amber-400 hover:bg-amber-500 text-amber-950 font-black rounded-2xl shadow-lg shadow-amber-100 flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50"
+              >
+                {isGeneratingInsights ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Sparkles className="w-5 h-5" />
+                )}
+                立即分析 Jacob 狀態
+              </button>
+            )}
+          </div>
+
+          {/* Manual Weekly Generate Button */}
           <div className="bg-indigo-50 rounded-3xl p-6 border border-indigo-100 text-center space-y-4 shadow-sm">
             <div className="space-y-2">
-              <p className="font-black text-indigo-900 text-lg">第 {currentWeekInfo.weekNum} 週週報</p>
-              <p className="text-xs text-indigo-600 font-medium">
-                {currentWeekInfo.isFriday8PMReached 
-                  ? "Jacob 的本週深度分析已準備就緒。" 
-                  : `系統預計於週五 20:00 自動產生。如果您現在需要，也可以手動提前產生。`}
+              <p className="font-black text-indigo-900 text-sm">第 {currentWeekInfo.weekNum} 週週報</p>
+              <p className="text-[10px] text-indigo-600 font-medium">
+                {hasValidReportForCurrentWeek 
+                  ? "本週週報已產生。您可以點擊下方按鈕重新產生。"
+                  : currentWeekInfo.isFriday8PMReached 
+                    ? "Jacob 的本週深度分析已準備就緒。" 
+                    : `系統預計於週五 20:00 自動產生。`}
               </p>
             </div>
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={handleManualGenerate}
-                className="px-8 py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-200 flex items-center justify-center gap-3 mx-auto active:scale-95 transition-all w-full max-w-xs"
-              >
-                <BrainCircuit className="w-6 h-6" />
-                立即產生週報
-              </button>
-              <button 
-                onClick={handleRefresh}
-                className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest hover:text-indigo-600 transition-colors"
-              >
-                重新整理頁面
-              </button>
-            </div>
+            <button
+              onClick={handleManualGenerate}
+              disabled={localIsGenerating || isGenerating}
+              className="px-6 py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-200 flex items-center justify-center gap-3 mx-auto active:scale-95 transition-all w-full disabled:opacity-50"
+            >
+              {localIsGenerating || isGenerating ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <BrainCircuit className="w-5 h-5" />
+              )}
+              {hasValidReportForCurrentWeek ? "重新產生週報" : "手動產生週報"}
+            </button>
           </div>
-        )}
+        </div>
 
         {/* Debug Info Toggle */}
         <div className="flex justify-center">
