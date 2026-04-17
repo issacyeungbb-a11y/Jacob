@@ -80,7 +80,7 @@ export const generateWeeklyAIReport = async (
                  (import.meta as any).env.VITE_API_KEY;
   
   if (!apiKey || apiKey === "undefined" || apiKey === "") {
-    return "系統設定錯誤：找不到 API Key，請確保已在 Secrets 或 Vercel 中設定 GEMINI_API_KEY 或 API_KEY。";
+    throw new Error("系統設定錯誤：找不到 API Key，請確保已在 Secrets 或 Vercel 中設定 GEMINI_API_KEY 或 API_KEY。");
   }
 
   let ai;
@@ -88,7 +88,7 @@ export const generateWeeklyAIReport = async (
     ai = new GoogleGenAI({ apiKey });
   } catch (e) {
     console.error("Failed to initialize GoogleGenAI:", e);
-    return "系統設定錯誤：API Key 初始化失敗。";
+    throw new Error("系統設定錯誤：API Key 初始化失敗。");
   }
 
   const sevenDaysAgo = new Date();
@@ -159,16 +159,20 @@ export const generateWeeklyAIReport = async (
       model: 'gemini-3.1-pro-preview',
       contents: prompt,
     });
-    return response.text || "目前無法產生週報。";
+    
+    if (!response.text) {
+        throw new Error("AI 返回了空白內容。");
+    }
+    return response.text;
   } catch (error: any) {
     console.error("Error generating weekly report:", error);
     const errorMsg = error?.message || "";
     if (errorMsg.includes("API_KEY_INVALID")) {
-      return "錯誤：API Key 無效，請檢查您在 Vercel 設定的數值是否正確。";
+      throw new Error("錯誤：API Key 無效，請檢查設定是否正確。");
     }
     if (errorMsg.includes("503") || errorMsg.includes("UNAVAILABLE")) {
-      return "抱歉，AI 伺服器目前太過繁忙（503 錯誤）。這通常是暫時性的，請等幾分鐘後再按一次「立即產生週報」。";
+      throw new Error("抱歉，AI 伺服器目前太過繁忙（503 錯誤）。這通常是暫時性的，請稍後再試。");
     }
-    return `抱歉，目前無法產生週報。原因：${errorMsg || "網路連線或 API 設定問題"}`;
+    throw new Error(`抱歉，目前無法產生週報。原因：${errorMsg || "網路連線或 API 設定問題"}`);
   }
 };

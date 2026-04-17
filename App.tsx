@@ -189,44 +189,25 @@ const App: React.FC = () => {
       const isPastTrigger = now.getTime() >= triggerTime.getTime();
 
       // Check if current week report exists
-      const currentReport = reports.find(r => r.weekNum === weekNum);
+      const currentReport = reports.find(r => 
+        r.weekNum === weekNum && 
+        !r.content.includes("無法產生週報") && 
+        !r.content.includes("系統設定錯誤") &&
+        !r.content.includes("API Key 無效") &&
+        !r.content.includes("伺服器目前太過繁忙")
+      );
 
+      console.log(`[Auto-Gen] Checking weekly report...`);
+      console.log(`[Auto-Gen] WeekNum: ${weekNum}, isPastTrigger: ${isPastTrigger}`);
+      console.log(`[Auto-Gen] Current report exists: ${!!currentReport}`);
+      console.log(`[Auto-Gen] isGeneratingRef.current: ${isGeneratingRef.current}`);
+
+      /* Auto-generation is disabled by user request.
       // Auto-generate if reached trigger time and no report for this week
       if (isPastTrigger && !currentReport && !isGeneratingRef.current) {
-        console.log(`[Auto-Gen] Starting generation for week ${weekNum}. Trigger time: ${triggerTime.toISOString()}`);
-        setIsGeneratingWeekly(true);
-        showToast(`正在自動為 Jacob 產生第 ${weekNum} 週週報...`);
-        
-        try {
-          const hktOffset = 8 * 60 * 60 * 1000;
-          const nowHKT = new Date(now.getTime() + hktOffset);
-          const dateStr = nowHKT.toLocaleDateString('zh-HK', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Hong_Kong' });
-          
-          const content = await generateWeeklyAIReport(logsRef.current, weekNum, months, dateStr);
-          
-          if (!content || content.includes("無法產生週報")) {
-            throw new Error("AI returned empty or error content");
-          }
-
-          const reportId = `week-${weekNum}-${nowHKT.toISOString().split('T')[0]}`;
-          const newReport = {
-            id: reportId,
-            weekNum: weekNum,
-            dateRange: `${new Date(now.getTime() - 6 * 24 * 3600 * 1000).toLocaleDateString('zh-HK')} - ${now.toLocaleDateString('zh-HK')}`,
-            content,
-            createdAt: now.toISOString()
-          };
-          
-          await saveWeeklyReport(newReport);
-          showToast(`第 ${weekNum} 週週報已自動產生！✨`);
-          console.log(`[Auto-Gen] Successfully saved report for week ${weekNum}`);
-        } catch (error) {
-          console.error("[Auto-Gen] Failed:", error instanceof Error ? error.message : String(error));
-          showToast("自動產生週報失敗，請稍後再試。");
-        } finally {
-          setIsGeneratingWeekly(false);
-        }
+        ...
       }
+      */
 
       if (reports.length > 0) {
         const latest = reports[0];

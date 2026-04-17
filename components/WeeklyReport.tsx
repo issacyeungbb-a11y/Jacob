@@ -1,8 +1,9 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { BabyLog, LogType, FeedLog, SleepLog, DiaperLog, WeeklyAIReport } from '../types';
-import { Calendar, Milk, Moon, Baby, TrendingUp, Info, Sparkles, BrainCircuit, Loader2, ChevronRight, ChevronLeft, Clock, Trash2 } from 'lucide-react';
+import { Calendar, Milk, Moon, Baby, TrendingUp, Info, Sparkles, BrainCircuit, Loader2, ChevronRight, ChevronLeft, Clock, Trash2, RefreshCw } from 'lucide-react';
 import { BIRTH_DATE, BABY_NAME } from '../constants';
-import { subscribeToWeeklyReports, deleteWeeklyReport } from '../services/storageService';
+import { generateWeeklyAIReport, generateBabyInsights } from '../services/geminiService';
+import { saveWeeklyReport, subscribeToWeeklyReports, deleteWeeklyReport } from '../services/storageService';
 import ReactMarkdown from 'react-markdown';
 
 interface WeeklyReportProps {
@@ -13,12 +14,29 @@ interface WeeklyReportProps {
 export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating = false }) => {
   const [weeklyReports, setWeeklyReports] = useState<WeeklyAIReport[]>([]);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
+  const [localIsGenerating, setLocalIsGenerating] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
+  const [shortInsights, setShortInsights] = useState<string | null>(null);
+  const [isGeneratingInsights, setIsGeneratingInsights] = useState(false);
 
   useEffect(() => {
     const unsubscribe = subscribeToWeeklyReports(setWeeklyReports);
     return () => unsubscribe();
   }, []);
+
+  const handleGenerateShortInsights = async () => {
+    if (isGeneratingInsights) return;
+    setIsGeneratingInsights(true);
+    try {
+      const insights = await generateBabyInsights(logs);
+      setShortInsights(insights);
+    } catch (error) {
+      console.error("Generate insights failed:", error);
+      alert("產生分析失敗，請稍後再試。");
+    } finally {
+      setIsGeneratingInsights(false);
+    }
+  };
 
   const currentWeekInfo = useMemo(() => {
     const birth = new Date(BIRTH_DATE);
@@ -49,6 +67,40 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
     return { weekNum, months, isFriday8PMReached, thisFridayHKT, nextFridayHKT, nowHKT };
   }, []);
 
+  const handleManualGenerate = async () => {
+    if (localIsGenerating || isGenerating) return;
+    setLocalIsGenerating(true);
+    try {
+      const dateStr = new Date().toLocaleDateString('zh-HK', { 
+        year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Hong_Kong' 
+      });
+      const content = await generateWeeklyAIReport(
+        logs, 
+        currentWeekInfo.weekNum, 
+        currentWeekInfo.months, 
+        dateStr
+      );
+      
+      const reportId = `week-${currentWeekInfo.weekNum}-${new Date().toISOString().split('T')[0]}`;
+      const newReport: WeeklyAIReport = {
+        id: reportId,
+        weekNum: currentWeekInfo.weekNum,
+        dateRange: `${new Date(Date.now() - 6 * 24 * 3600 * 1000).toLocaleDateString('zh-HK')} - ${new Date().toLocaleDateString('zh-HK')}`,
+        content,
+        createdAt: new Date().toISOString()
+      };
+      
+      await saveWeeklyReport(newReport);
+      setSelectedReportId(reportId);
+      console.log("Manual generation successful:", reportId);
+    } catch (error) {
+      console.error("Manual generation failed:", error instanceof Error ? error.message : String(error));
+      alert(error instanceof Error ? error.message : "產生週報失敗，請檢查網路連線或稍後再試。");
+    } finally {
+      setLocalIsGenerating(false);
+    }
+  };
+
   const handleDeleteReport = async (reportId: string) => {
     if (!confirm("確定要刪除這份週報嗎？刪除後可以重新產生。")) return;
     
@@ -70,6 +122,17 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
   const selectedReport = useMemo(() => {
     return weeklyReports.find(r => r.id === selectedReportId) || (weeklyReports.length > 0 ? weeklyReports[0] : null);
   }, [weeklyReports, selectedReportId]);
+
+  // Determine if we need to show the generate button
+  const hasValidReportForCurrentWeek = useMemo(() => {
+    const report = weeklyReports.find(r => r.weekNum === currentWeekInfo.weekNum);
+    if (!report) return false;
+    // If report exists but contains error message, consider it invalid
+    if (report.content.includes("無法產生週報") || report.content.includes("系統設定錯誤") || report.content.includes("API Key 無效") || report.content.includes("伺服器目前太過繁忙")) {
+      return false;
+    }
+    return true;
+  }, [weeklyReports, currentWeekInfo.weekNum]);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -110,7 +173,7 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
         </div>
 
         {/* Loading State for Auto-generation */}
-        {isGenerating && (
+        {(isGenerating || localIsGenerating) && (
           <div className="bg-white rounded-3xl p-8 text-center border border-indigo-100 shadow-sm space-y-4 animate-pulse">
             <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto" />
             <div className="space-y-2">
@@ -119,6 +182,71 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
             </div>
           </div>
         )}
+
+        {/* AI Insights & Manual Generate Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Short Insights Button */}
+          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="bg-amber-100 p-2 rounded-xl">
+                <Sparkles className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h4 className="font-black text-gray-800 text-sm">AI 快速分析</h4>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">即時數據洞察</p>
+              </div>
+            </div>
+            
+            {shortInsights ? (
+              <div className="bg-amber-50/50 rounded-2xl p-4 text-xs text-gray-700 leading-relaxed border border-amber-100/50 animate-fade-in">
+                <ReactMarkdown>{shortInsights}</ReactMarkdown>
+                <button 
+                  onClick={handleGenerateShortInsights}
+                  className="mt-3 text-[10px] font-black text-amber-600 uppercase tracking-widest flex items-center gap-1 hover:text-amber-700 transition-colors"
+                >
+                  <RefreshCw className="w-3 h-3" /> 重新分析
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleGenerateShortInsights}
+                disabled={isGeneratingInsights}
+                className="w-full py-4 bg-amber-400 hover:bg-amber-500 text-amber-950 font-black rounded-2xl shadow-lg shadow-amber-100 flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50"
+              >
+                {isGeneratingInsights ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Sparkles className="w-5 h-5" />
+                )}
+                立即分析 Jacob 狀態
+              </button>
+            )}
+          </div>
+
+          {/* Manual Weekly Generate Button */}
+          <div className="bg-indigo-50 rounded-3xl p-6 border border-indigo-100 text-center space-y-4 shadow-sm">
+            <div className="space-y-2">
+              <p className="font-black text-indigo-900 text-sm">第 {currentWeekInfo.weekNum} 週週報</p>
+              <p className="text-[10px] text-indigo-600 font-medium">
+                {hasValidReportForCurrentWeek 
+                  ? "本週週報已產生。" 
+                  : `Jacob 的第 ${currentWeekInfo.weekNum} 週分析已準備就緒。`}
+              </p>
+            </div>
+            <button
+              onClick={handleManualGenerate}
+              disabled={localIsGenerating || isGenerating}
+              className="px-6 py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-200 flex items-center justify-center gap-3 mx-auto active:scale-95 transition-all w-full disabled:opacity-50"
+            >
+              {localIsGenerating || isGenerating ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <BrainCircuit className="w-5 h-5" />
+              )}
+              {hasValidReportForCurrentWeek ? "重新產生本週週報" : "產生本週週報"}
+            </button>
+          </div>
+        </div>
 
         {/* Debug Info Toggle */}
         <div className="flex justify-center">
