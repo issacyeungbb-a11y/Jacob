@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { BabyLog, LogType, FeedLog, SleepLog, DiaperLog, WeeklyAIReport } from '../types';
 import { Calendar, Milk, Moon, Baby, TrendingUp, Info, Sparkles, BrainCircuit, Loader2, ChevronRight, ChevronLeft, Clock, Trash2, RefreshCw } from 'lucide-react';
 import { BIRTH_DATE, BABY_NAME } from '../constants';
-import { generateWeeklyAIReport, generateBabyInsights } from '../services/geminiService';
+import { generateWeeklyAIReport } from '../services/geminiService';
 import { saveWeeklyReport, subscribeToWeeklyReports, deleteWeeklyReport } from '../services/storageService';
 import ReactMarkdown from 'react-markdown';
 
@@ -16,27 +16,11 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [localIsGenerating, setLocalIsGenerating] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
-  const [shortInsights, setShortInsights] = useState<string | null>(null);
-  const [isGeneratingInsights, setIsGeneratingInsights] = useState(false);
 
   useEffect(() => {
     const unsubscribe = subscribeToWeeklyReports(setWeeklyReports);
     return () => unsubscribe();
   }, []);
-
-  const handleGenerateShortInsights = async () => {
-    if (isGeneratingInsights) return;
-    setIsGeneratingInsights(true);
-    try {
-      const insights = await generateBabyInsights(logs);
-      setShortInsights(insights);
-    } catch (error) {
-      console.error("Generate insights failed:", error);
-      alert("產生分析失敗，請稍後再試。");
-    } finally {
-      setIsGeneratingInsights(false);
-    }
-  };
 
   const currentWeekInfo = useMemo(() => {
     const birth = new Date(BIRTH_DATE);
@@ -183,54 +167,13 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
           </div>
         )}
 
-        {/* AI Insights & Manual Generate Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Short Insights Button */}
-          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="bg-amber-100 p-2 rounded-xl">
-                <Sparkles className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <h4 className="font-black text-gray-800 text-sm">AI 快速分析</h4>
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">即時數據洞察</p>
-              </div>
-            </div>
-            
-            {shortInsights ? (
-              <div className="bg-amber-50/50 rounded-2xl p-4 text-xs text-gray-700 leading-relaxed border border-amber-100/50 animate-fade-in">
-                <ReactMarkdown>{shortInsights}</ReactMarkdown>
-                <button 
-                  onClick={handleGenerateShortInsights}
-                  className="mt-3 text-[10px] font-black text-amber-600 uppercase tracking-widest flex items-center gap-1 hover:text-amber-700 transition-colors"
-                >
-                  <RefreshCw className="w-3 h-3" /> 重新分析
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={handleGenerateShortInsights}
-                disabled={isGeneratingInsights}
-                className="w-full py-4 bg-amber-400 hover:bg-amber-500 text-amber-950 font-black rounded-2xl shadow-lg shadow-amber-100 flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50"
-              >
-                {isGeneratingInsights ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Sparkles className="w-5 h-5" />
-                )}
-                立即分析 Jacob 狀態
-              </button>
-            )}
-          </div>
-
-          {/* Manual Weekly Generate Button */}
+        {/* Manual Weekly Generate Button - Only shows when it's Friday 8PM+ and no valid report exists */}
+        {currentWeekInfo.isFriday8PMReached && !hasValidReportForCurrentWeek && (
           <div className="bg-indigo-50 rounded-3xl p-6 border border-indigo-100 text-center space-y-4 shadow-sm">
             <div className="space-y-2">
               <p className="font-black text-indigo-900 text-sm">第 {currentWeekInfo.weekNum} 週週報</p>
               <p className="text-[10px] text-indigo-600 font-medium">
-                {hasValidReportForCurrentWeek 
-                  ? "本週週報已產生。" 
-                  : `Jacob 的第 ${currentWeekInfo.weekNum} 週分析已準備就緒。`}
+                Jacob 的第 {currentWeekInfo.weekNum} 週分析已準備就緒。
               </p>
             </div>
             <button
@@ -243,10 +186,10 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
               ) : (
                 <BrainCircuit className="w-5 h-5" />
               )}
-              {hasValidReportForCurrentWeek ? "重新產生本週週報" : "產生本週週報"}
+              產生本週週報
             </button>
           </div>
-        </div>
+        )}
 
         {/* Debug Info Toggle */}
         <div className="flex justify-center">
