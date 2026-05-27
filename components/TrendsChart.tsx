@@ -38,6 +38,10 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
   const [selectedPoint, setSelectedPoint] = useState<{ data: PointData; x: number; y: number } | null>(null);
   const chartRef = useRef<HTMLDivElement>(null);
 
+  // Bar Chart Tooltip Active State and Ref
+  const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
+  const barChartRef = useRef<HTMLDivElement>(null);
+
   const togglePattern = (key: PatternKey) => {
     setVisiblePatterns(prev => ({ ...prev, [key]: !prev[key] }));
     setSelectedPoint(null); // Close popup on toggle
@@ -45,13 +49,21 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
 
   // Close popup when clicking outside
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-        if (chartRef.current && !chartRef.current.contains(e.target as Node)) {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+        const targetNode = e.target as Node;
+        if (chartRef.current && !chartRef.current.contains(targetNode)) {
             setSelectedPoint(null);
+        }
+        if (barChartRef.current && !barChartRef.current.contains(targetNode)) {
+            setHoveredBarIndex(null);
         }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+        document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, []);
 
   // Helper: Generate last N days dates (YYYY-MM-DD)
@@ -335,13 +347,22 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
     <div className="space-y-6">
         
         {/* --- SECTION 1: BAR CHART (Existing) --- */}
-        <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
+        <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100" ref={barChartRef}>
             <div className="flex flex-col gap-4 mb-6">
                 <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5 text-gray-600" />
-                    總量趨勢
-                    </h3>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                        <BarChart3 className="w-5 h-5 text-gray-600" />
+                        總量趨勢
+                        </h3>
+                        {hoveredBarIndex !== null && chartData[hoveredBarIndex] && (
+                            <span className="text-[10px] sm:text-xs font-black px-2 py-0.5 rounded-md bg-slate-50 border border-slate-100 text-slate-700 flex items-center gap-1.5 animate-fade-in shadow-sm">
+                                <span>{chartData[hoveredBarIndex].displayDate}</span>
+                                <span className="text-gray-300">|</span>
+                                <span className={`${getColor().split(' ')[0]}`}>{chartData[hoveredBarIndex].value} {getUnit()}</span>
+                            </span>
+                        )}
+                    </div>
                     <div className="flex gap-1">
                         <RangeButton range={7} label="7天" />
                         <RangeButton range={14} label="14天" />
@@ -380,15 +401,30 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
                         </div>
 
                         {chartData.map((d, i) => (
-                        <div key={i} className="flex flex-col items-center flex-1 z-10 group h-full justify-end relative">
+                        <div 
+                            key={i} 
+                            className="flex flex-col items-center flex-1 z-10 group h-full justify-end relative cursor-pointer"
+                            onMouseEnter={() => setHoveredBarIndex(i)}
+                            onMouseLeave={() => setHoveredBarIndex(null)}
+                            onTouchStart={() => setHoveredBarIndex(i)}
+                            onClick={() => setHoveredBarIndex(hoveredBarIndex === i ? null : i)}
+                        >
                             {/* Tooltip */}
-                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 z-30 pointer-events-none mb-1">
+                            <div 
+                                className={`absolute left-1/2 -translate-x-1/2 transition-all duration-200 z-30 pointer-events-none mb-1 ${
+                                    hoveredBarIndex === i 
+                                        ? 'opacity-100 scale-100 translate-y-0' 
+                                        : 'opacity-0 scale-95 translate-y-1 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0'
+                                }`}
+                                style={{ bottom: `${getBarHeight(d.value) + 12}px` }}
+                            >
                                 <div className="relative">
-                                    <div className="bg-gray-900 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg whitespace-nowrap">
-                                        {d.value} {getUnit()}
+                                    <div className="bg-gray-900/95 backdrop-blur-sm text-white text-[10.5px] font-bold px-2.5 py-1 rounded-xl shadow-lg whitespace-nowrap flex flex-col items-center border border-gray-800">
+                                        <span className="text-[8px] text-gray-400 font-medium leading-none pb-0.5">{d.displayDate}</span>
+                                        <span className="leading-tight">{d.value} {getUnit()}</span>
                                     </div>
                                     {/* Triangle */}
-                                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
+                                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gradient-to-br from-gray-900/95 to-gray-950 rotate-45 border-r border-b border-gray-800"></div>
                                 </div>
                             </div>
                             
