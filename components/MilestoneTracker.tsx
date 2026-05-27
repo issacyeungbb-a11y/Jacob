@@ -1,24 +1,13 @@
 import React, { useMemo } from 'react';
-import { BabyLog, LogType, MilestoneLog } from '../types';
+import { BabyLog } from '../types';
 import { MILESTONES } from '../constants';
-import { Flag, CheckCircle2, Circle, Check } from 'lucide-react';
-import { addLogToCloud, deleteLogFromCloud } from '../services/storageService';
+import { Flag } from 'lucide-react';
 
 interface MilestoneTrackerProps {
   logs: BabyLog[];
 }
 
-export const MilestoneTracker: React.FC<MilestoneTrackerProps> = ({ logs }) => {
-  const milestoneLogs = useMemo(() => {
-    return logs.filter(l => l.type === LogType.MILESTONE) as MilestoneLog[];
-  }, [logs]);
-
-  const completedMilestoneMap = useMemo(() => {
-    const map = new Map<string, string>(); // milestoneId -> logId
-    milestoneLogs.forEach(l => map.set(l.milestoneId, l.id));
-    return map;
-  }, [milestoneLogs]);
-
+export const MilestoneTracker: React.FC<MilestoneTrackerProps> = () => {
   const milestonesByMonth = useMemo(() => {
     const grouped: Record<number, typeof MILESTONES> = {};
     MILESTONES.forEach(m => {
@@ -28,33 +17,15 @@ export const MilestoneTracker: React.FC<MilestoneTrackerProps> = ({ logs }) => {
     return grouped;
   }, []);
 
-  const handleToggleMilestone = async (milestoneId: string) => {
-    const existingLogId = completedMilestoneMap.get(milestoneId);
-    
-    if (existingLogId) {
-      // Remove milestone
-      await deleteLogFromCloud(existingLogId);
-    } else {
-      // Add milestone
-      const newLog: MilestoneLog = {
-        id: Date.now().toString(),
-        timestamp: new Date().toISOString(),
-        type: LogType.MILESTONE,
-        milestoneId: milestoneId
-      };
-      await addLogToCloud(newLog);
-    }
-  };
-
   return (
     <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
       <div className="flex justify-between items-start mb-6">
         <div>
           <h3 className="font-bold text-gray-800 flex items-center gap-2">
             <Flag className="w-5 h-5 text-purple-500" />
-            發展里程碑紀錄
+            發展里程碑參考
           </h3>
-          <p className="text-[10px] text-gray-400 mt-1">點擊方格即可標記 Jacob 已完成的里程碑</p>
+          <p className="text-[10px] text-gray-400 mt-1">本資料庫僅供發展階段對照與指標參考</p>
         </div>
         <span className="text-[9px] text-gray-400 bg-gray-50 px-2 py-1 rounded-md border border-gray-100 text-right">
           參考: 美國 CDC & 香港衞生署
@@ -76,44 +47,32 @@ export const MilestoneTracker: React.FC<MilestoneTrackerProps> = ({ logs }) => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-100">
-                    <th className="py-3 px-4 text-[10px] font-black text-gray-400 uppercase tracking-wider w-20">類別</th>
+                    <th className="py-3 px-4 text-[10px] font-black text-gray-400 uppercase tracking-wider w-24">類別</th>
                     <th className="py-3 px-4 text-[10px] font-black text-gray-400 uppercase tracking-wider">里程碑內容</th>
-                    <th className="py-3 px-4 text-[10px] font-black text-gray-400 uppercase tracking-wider w-16 text-center">完成</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {milestones.map((m, idx) => {
-                    const isCompleted = completedMilestoneMap.has(m.id);
+                  {milestones.map((m) => {
                     return (
                       <tr 
                         key={m.id} 
-                        className={`border-b border-gray-50 last:border-0 transition-colors cursor-pointer hover:bg-purple-50/30 ${isCompleted ? 'bg-purple-50/20' : ''}`}
-                        onClick={() => handleToggleMilestone(m.id)}
+                        className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors"
                       >
                         <td className="py-3 px-4">
-                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap ${
-                            m.category.includes('大肌肉') ? 'bg-blue-100 text-blue-600' :
-                            m.category.includes('細肌肉') ? 'bg-emerald-100 text-emerald-600' :
-                            m.category.includes('語言') ? 'bg-amber-100 text-amber-600' :
-                            m.category.includes('社交') ? 'bg-rose-100 text-rose-600' :
-                            'bg-purple-100 text-purple-600'
+                          <span className={`text-[9.5px] font-extrabold px-2 py-0.5 rounded-md whitespace-nowrap ${
+                            m.category.includes('大肌肉') ? 'bg-blue-50 text-blue-600 border border-blue-100' :
+                            m.category.includes('細肌肉') ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                            m.category.includes('語言') ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+                            m.category.includes('社交') ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+                            'bg-purple-50 text-purple-600 border border-purple-100'
                           }`}>
                             {m.category}
                           </span>
                         </td>
                         <td className="py-3 px-4">
-                          <p className={`text-xs font-medium leading-relaxed ${isCompleted ? 'text-gray-800' : 'text-gray-500'}`}>
+                          <p className="text-xs font-medium leading-relaxed text-gray-700">
                             {m.name}
                           </p>
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <div className={`w-6 h-6 mx-auto rounded-lg border-2 flex items-center justify-center transition-all ${
-                            isCompleted 
-                              ? 'bg-purple-500 border-purple-500 shadow-sm' 
-                              : 'bg-white border-gray-200'
-                          }`}>
-                            {isCompleted && <Check className="w-4 h-4 text-white" />}
-                          </div>
                         </td>
                       </tr>
                     );

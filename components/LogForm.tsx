@@ -203,7 +203,6 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
         <TabButton type={LogType.HEALTH} label="健康" />
         <TabButton type={LogType.TUMMY_TIME} label="趴地" />
         <TabButton type={LogType.VACCINE} label="疫苗" />
-        <TabButton type={LogType.MILESTONE} label="里程碑" />
         <TabButton type={LogType.OTHER} label="其他" />
       </div>
 
