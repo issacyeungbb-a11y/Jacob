@@ -213,9 +213,8 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
         <TabButton type={LogType.DIAPER} label="尿片" />
         <TabButton type={LogType.SLEEP} label="睡眠" />
         <TabButton type={LogType.HEALTH} label="健康" />
-        <TabButton type={LogType.TUMMY_TIME} label="趴地" />
         <TabButton type={LogType.VACCINE} label="疫苗" />
-        <TabButton type={LogType.MILESTONE} label="生活點滴" />
+        <TabButton type={LogType.MILESTONE} label="成長點滴" />
         <TabButton type={LogType.OTHER} label="其他" />
       </div>
 
@@ -499,20 +498,6 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
             </div>
             )}
 
-            {activeType === LogType.TUMMY_TIME && (
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-                    <Timer className="w-4 h-4 text-orange-500" /> 趴地訓練時間 (分鐘)
-                </label>
-                <input
-                    type="number"
-                    value={tummyDuration}
-                    onChange={(e) => setTummyDuration(Number(e.target.value))}
-                    className="w-full p-3 rounded-xl bg-orange-50 border border-orange-200 focus:ring-2 focus:ring-orange-500 outline-none text-orange-800 text-center font-bold text-xl"
-                    placeholder="5"
-                />
-            </div>
-            )}
 
             {activeType === LogType.VACCINE && (
             <div>
@@ -577,7 +562,7 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
                 </div>
 
                 <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">細節點滴記述 (選填)</label>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">成長細節記述 (選填)</label>
                     <textarea
                         rows={3}
                         value={momentNotes}

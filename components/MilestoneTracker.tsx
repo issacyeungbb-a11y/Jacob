@@ -75,7 +75,7 @@ export const MilestoneTracker: React.FC<MilestoneTrackerProps> = ({ logs }) => {
           <div>
             <h3 className="font-extrabold text-purple-950 flex items-center gap-2 text-lg sm:text-xl">
               <Sparkles className="w-5 h-5 text-purple-500 animate-pulse" />
-              生活點滴札記
+              成長點滴札記
             </h3>
             <p className="text-xs text-purple-400 mt-1">
               Jacob 成長過程中的特別時刻、趣事、情緒氣氛或隨手日常生活記錄。
@@ -150,7 +150,7 @@ export const MilestoneTracker: React.FC<MilestoneTrackerProps> = ({ logs }) => {
             <span className="text-4xl block mb-3 select-none">✍️</span>
             <h4 className="font-extrabold text-gray-600 mb-2">記錄 Jacob 的第一個感動</h4>
             <p className="text-xs text-gray-400 max-w-sm mx-auto leading-relaxed">
-              尚未有生活點滴記錄。在下方的「生活點滴」分頁即可新增特別的回事、生活趣事或出遊心情唷！
+              尚未有成長點滴記錄。在下方的「成長點滴」分頁即可新增特別的回事、生活趣事或出遊心情唷！
             </p>
           </div>
         )}

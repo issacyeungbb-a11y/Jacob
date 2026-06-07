@@ -180,7 +180,7 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog, onUpdateLog
                     <span className="font-bold text-gray-700">{`[${m.category}] ${m.name}`}</span>
                     {ml.notes && <p className="text-xs text-gray-500 italic mt-0.5">{ml.notes}</p>}
                 </div>
-            ) : '未知里程碑';
+            ) : '未知成長點滴';
         case LogType.SUMMARY:
             const sumLog = log as SummaryLog;
             return (
