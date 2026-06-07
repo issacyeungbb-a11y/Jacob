@@ -35,8 +35,10 @@ export interface BaseLog {
 
 export interface FeedLog extends BaseLog {
   type: LogType.FEED;
-  amountMl: number;
+  amountMl?: number;
   feedType: FeedType;
+  solidFoodName?: string;
+  solidFoodAmount?: string;
 }
 
 export interface DiaperLog extends BaseLog {

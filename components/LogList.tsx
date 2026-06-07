@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BabyLog, LogType, FeedLog, DiaperLog, SleepLog, HealthLog, OtherLog, SummaryLog, TummyTimeLog, VaccineLog, MilestoneLog, DiaperType } from '../types';
+import { BabyLog, LogType, FeedLog, FeedType, DiaperLog, SleepLog, HealthLog, OtherLog, SummaryLog, TummyTimeLog, VaccineLog, MilestoneLog, DiaperType } from '../types';
 import { Milk, Baby, Moon, Activity, Trash2, Edit2, StickyNote, Sunrise, Sun, Sunset, MoonStar, Clock, AlertTriangle, Smile, Meh, Frown, ClipboardCheck, Star, Timer, Syringe, Flag, X, Check, Sparkles } from 'lucide-react';
 import { HK_VACCINES, MILESTONES } from '../constants';
 
@@ -96,7 +96,19 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog, onUpdateLog
                         const updatedLog = { ...log };
                         // Simple logic: update the primary field based on type
                         switch(log.type) {
-                            case LogType.FEED: (updatedLog as FeedLog).amountMl = parseInt(editValue) || 0; break;
+                            case LogType.FEED: {
+                                const fLog = updatedLog as FeedLog;
+                                if (fLog.feedType === FeedType.SOLIDS) {
+                                    const parts = editValue.split('/');
+                                    fLog.solidFoodName = parts[0]?.trim() || '副食品';
+                                    if (parts[1]) {
+                                        fLog.solidFoodAmount = parts[1]?.trim() || '適量';
+                                    }
+                                } else {
+                                    fLog.amountMl = parseInt(editValue) || 0;
+                                }
+                                break;
+                            }
                             case LogType.DIAPER: (updatedLog as DiaperLog).status = editValue as DiaperType; break;
                             case LogType.OTHER: (updatedLog as OtherLog).details = editValue; break;
                             case LogType.TUMMY_TIME: (updatedLog as TummyTimeLog).durationMinutes = parseInt(editValue) || 0; break;
@@ -123,6 +135,16 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog, onUpdateLog
         switch (log.type) {
         case LogType.FEED:
             const f = log as FeedLog;
+            if (f.feedType === FeedType.SOLIDS) {
+                return (
+                    <div className="flex flex-col gap-0.5">
+                        <span className="font-extrabold text-blue-900 flex items-center gap-1.5 flex-wrap">
+                            <span>{f.solidFoodName || '副食品'}</span>
+                            <span className="text-xs bg-emerald-50 border border-emerald-100 text-emerald-600 px-2 py-0.5 rounded-md font-bold">{f.solidFoodAmount || '適量'}</span>
+                        </span>
+                    </div>
+                );
+            }
             return `${f.amountMl || 0}ml - ${f.feedType || '未知'}`;
         case LogType.DIAPER:
             return (log as DiaperLog).status || '未知狀態';
@@ -277,7 +299,15 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog, onUpdateLog
                           setEditingLogId(log.id);
                           // Set initial edit value
                           switch(log.type) {
-                              case LogType.FEED: setEditValue(String((log as FeedLog).amountMl || '')); break;
+                              case LogType.FEED: {
+                                  const fLog = log as FeedLog;
+                                  if (fLog.feedType === FeedType.SOLIDS) {
+                                      setEditValue(`${fLog.solidFoodName || '副食品'} / ${fLog.solidFoodAmount || '適量'}`);
+                                  } else {
+                                      setEditValue(String(fLog.amountMl || ''));
+                                  }
+                                  break;
+                              }
                               case LogType.DIAPER: setEditValue((log as DiaperLog).status || ''); break;
                               case LogType.OTHER: setEditValue((log as OtherLog).details || ''); break;
                               case LogType.TUMMY_TIME: setEditValue(String((log as TummyTimeLog).durationMinutes || '')); break;

@@ -26,6 +26,8 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
 
   const [amount, setAmount] = useState<number>(120);
   const [feedType, setFeedType] = useState<FeedType>(FeedType.FORMULA);
+  const [solidFoodName, setSolidFoodName] = useState<string>("");
+  const [solidFoodAmount, setSolidFoodAmount] = useState<string>("");
   const [diaperStatus, setDiaperStatus] = useState<DiaperType>(DiaperType.WET);
   
   // Live Mode State
@@ -119,7 +121,17 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
 
         switch (activeType) {
             case LogType.FEED:
-                newLog = { ...baseLog, type: LogType.FEED, amountMl: Number(amount), feedType } as any;
+                if (feedType === FeedType.SOLIDS) {
+                    newLog = { 
+                        ...baseLog, 
+                        type: LogType.FEED, 
+                        feedType, 
+                        solidFoodName: solidFoodName.trim() || '副食品', 
+                        solidFoodAmount: solidFoodAmount.trim() || '適量' 
+                    } as any;
+                } else {
+                    newLog = { ...baseLog, type: LogType.FEED, amountMl: Number(amount), feedType } as any;
+                }
                 break;
             case LogType.DIAPER:
                 newLog = { ...baseLog, type: LogType.DIAPER, status: diaperStatus } as any;
@@ -167,6 +179,8 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
     setMomentTitle("");
     setMomentEmoji("😊");
     setMomentNotes("");
+    setSolidFoodName("");
+    setSolidFoodAmount("");
     const now = new Date();
     setDate(toLocalISO(now));
     setQuickSleepEnd(toLocalISO(now));
@@ -407,16 +421,43 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
                     ))}
                 </div>
                 </div>
-                <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">奶量 (ml)</label>
-                <input
-                    type="number"
-                    value={amount}
-                    onChange={(e) => setAmount(Number(e.target.value))}
-                    className="w-full p-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="120"
-                />
-                </div>
+                {feedType === FeedType.SOLIDS ? (
+                    <div className="space-y-3">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">食品名稱</label>
+                            <input
+                                type="text"
+                                value={solidFoodName}
+                                onChange={(e) => setSolidFoodName(e.target.value)}
+                                className="w-full p-3 rounded-xl bg-blue-50/50 border border-blue-100 focus:ring-2 focus:ring-blue-500 outline-none placeholder-blue-300 font-bold"
+                                placeholder="例如：南瓜泥、蘋果茸益生菌、雞肉粟米粥"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">份量 (例如: 50g、1/2 碗、3茶匙)</label>
+                            <input
+                                type="text"
+                                value={solidFoodAmount}
+                                onChange={(e) => setSolidFoodAmount(e.target.value)}
+                                className="w-full p-3 rounded-xl bg-blue-50/50 border border-blue-100 focus:ring-2 focus:ring-blue-500 outline-none placeholder-blue-300 font-medium"
+                                placeholder="例如：40g / 1小碗 / 5茶匙"
+                                required
+                            />
+                        </div>
+                    </div>
+                ) : (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">奶量 (ml)</label>
+                        <input
+                            type="number"
+                            value={amount}
+                            onChange={(e) => setAmount(Number(e.target.value))}
+                            className="w-full p-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-center text-xl font-bold"
+                            placeholder="120"
+                        />
+                    </div>
+                )}
             </>
             )}
 

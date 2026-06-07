@@ -1,15 +1,15 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { BabyLog, LogType, FeedLog, SleepLog, DiaperLog, DiaperType, OtherLog } from '../types';
-import { BarChart3, Milk, Moon, Layers, Clock, Check, X, Info } from 'lucide-react';
+import { BabyLog, LogType, FeedLog, FeedType, SleepLog, DiaperLog, DiaperType, OtherLog } from '../types';
+import { BarChart3, Milk, Moon, Layers, Clock, Check, X, Info, Apple } from 'lucide-react';
 
 interface TrendsChartProps {
   logs: BabyLog[];
 }
 
-type ChartMode = 'MILK' | 'SLEEP' | 'DIAPER';
+type ChartMode = 'MILK' | 'SOLIDS' | 'SLEEP' | 'DIAPER';
 type TimeRange = 7 | 14 | 30 | 'ALL';
-type PatternKey = 'FEED' | 'WET' | 'DIRTY' | 'BATH';
+type PatternKey = 'FEED' | 'SOLIDS' | 'WET' | 'DIRTY' | 'BATH';
 
 interface PointData {
   log: BabyLog;
@@ -29,6 +29,7 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
   // Filter State for Pattern Chart
   const [visiblePatterns, setVisiblePatterns] = useState<Record<PatternKey, boolean>>({
     FEED: true,
+    SOLIDS: true,
     WET: true,
     DIRTY: true,
     BATH: true
@@ -142,8 +143,12 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
       let value = 0;
       if (mode === 'MILK') {
         value = dayLogs
-          .filter(l => l.type === LogType.FEED)
+          .filter(l => l.type === LogType.FEED && (l as FeedLog).feedType !== FeedType.SOLIDS)
           .reduce((sum, l) => sum + ((l as FeedLog).amountMl || 0), 0);
+      } else if (mode === 'SOLIDS') {
+        value = dayLogs
+          .filter(l => l.type === LogType.FEED && (l as FeedLog).feedType === FeedType.SOLIDS)
+          .length;
       } else if (mode === 'SLEEP') {
         const minutes = dayLogs
           .filter(l => l.type === LogType.SLEEP)
@@ -192,11 +197,19 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
              // Determine Color, Type and Details
              if (log.type === LogType.FEED) {
                  const fLog = log as FeedLog;
-                 colorClass = 'bg-blue-500 ring-2 ring-blue-100';
-                 typeLabel = '飲奶';
-                 details = `${fLog.amountMl}ml (${fLog.feedType})`;
-                 zIndex = 20;
-                 typeKey = 'FEED';
+                 if (fLog.feedType === FeedType.SOLIDS) {
+                     colorClass = 'bg-emerald-500 ring-2 ring-emerald-100';
+                     typeLabel = '副食品';
+                     details = `${fLog.solidFoodName || '副食品'} (${fLog.solidFoodAmount || '適量'})`;
+                     zIndex = 22;
+                     typeKey = 'SOLIDS';
+                 } else {
+                     colorClass = 'bg-blue-500 ring-2 ring-blue-100';
+                     typeLabel = '飲奶';
+                     details = `${fLog.amountMl}ml (${fLog.feedType})`;
+                     zIndex = 20;
+                     typeKey = 'FEED';
+                 }
              } else if (log.type === LogType.DIAPER) {
                  const dLog = log as DiaperLog;
                  if (dLog.status === DiaperType.WET) {
@@ -256,6 +269,7 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
   const getColor = () => {
     switch (mode) {
       case 'MILK': return 'text-blue-500 bg-blue-500';
+      case 'SOLIDS': return 'text-emerald-500 bg-emerald-500';
       case 'SLEEP': return 'text-indigo-500 bg-indigo-500';
       case 'DIAPER': return 'text-amber-500 bg-amber-500';
     }
@@ -264,6 +278,7 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
   const getUnit = () => {
      switch (mode) {
       case 'MILK': return 'ml';
+      case 'SOLIDS': return '次';
       case 'SLEEP': return 'hr';
       case 'DIAPER': return '次';
     }
@@ -373,6 +388,7 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
                 
                 <div className="flex gap-2 overflow-x-auto no-scrollbar">
                     <TabButton m="MILK" icon={Milk} label="奶量" />
+                    <TabButton m="SOLIDS" icon={Apple} label="副食品" />
                     <TabButton m="SLEEP" icon={Moon} label="睡眠" />
                     <TabButton m="DIAPER" icon={Layers} label="換片" />
                 </div>
@@ -477,6 +493,7 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
                 {/* Interactive Legend */}
                 <div className="flex flex-wrap gap-2">
                    <LegendToggle pKey="FEED" color="bg-blue-500" label="飲奶" />
+                   <LegendToggle pKey="SOLIDS" color="bg-emerald-500" label="副食品" />
                    <LegendToggle pKey="WET" color="bg-amber-300" label="小便" />
                    <LegendToggle pKey="DIRTY" color="bg-orange-500" label="大便" />
                    <LegendToggle pKey="BATH" color="bg-pink-400" label="沖涼" />
