@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { LogType, FeedType, DiaperType, BabyLog, HealthLog, SleepQuality, TummyTimeLog, VaccineLog, MilestoneLog } from '../types';
-import { PlusCircle, CalendarDays, Moon, Play, Square, History, Weight, Ruler, Activity, Clock, Smile, Meh, Frown, Timer, Syringe, Flag } from 'lucide-react';
+import { PlusCircle, CalendarDays, Moon, Play, Square, History, Weight, Ruler, Activity, Clock, Smile, Meh, Frown, Timer, Syringe, Flag, Sparkles } from 'lucide-react';
 import { HK_VACCINES, MILESTONES } from '../constants';
 
 interface LogFormProps {
@@ -44,6 +44,9 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
   const [tummyDuration, setTummyDuration] = useState<number>(5);
   const [vaccineId, setVaccineId] = useState<string>(HK_VACCINES[0].id);
   const [milestoneId, setMilestoneId] = useState<string>(MILESTONES[0].id);
+  const [momentTitle, setMomentTitle] = useState<string>("");
+  const [momentEmoji, setMomentEmoji] = useState<string>("😊");
+  const [momentNotes, setMomentNotes] = useState<string>("");
   const [date, setDate] = useState<string>(toLocalISO(new Date()));
 
   const timeSinceLastFeed = useMemo(() => {
@@ -143,7 +146,13 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
                 newLog = { ...baseLog, type: LogType.VACCINE, vaccineId } as VaccineLog;
                 break;
             case LogType.MILESTONE:
-                newLog = { ...baseLog, type: LogType.MILESTONE, milestoneId } as MilestoneLog;
+                newLog = { 
+                    ...baseLog, 
+                    type: LogType.MILESTONE, 
+                    title: momentTitle.trim() || '特別時刻', 
+                    emoji: momentEmoji,
+                    notes: momentNotes.trim()
+                } as any;
                 break;
             default:
                 return;
@@ -155,6 +164,9 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
     // Reset fields
     setHealthValue("");
     setOtherDetails("");
+    setMomentTitle("");
+    setMomentEmoji("😊");
+    setMomentNotes("");
     const now = new Date();
     setDate(toLocalISO(now));
     setQuickSleepEnd(toLocalISO(now));
@@ -203,6 +215,7 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
         <TabButton type={LogType.HEALTH} label="健康" />
         <TabButton type={LogType.TUMMY_TIME} label="趴地" />
         <TabButton type={LogType.VACCINE} label="疫苗" />
+        <TabButton type={LogType.MILESTONE} label="生活點滴" />
         <TabButton type={LogType.OTHER} label="其他" />
       </div>
 
@@ -519,19 +532,60 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
             )}
 
             {activeType === LogType.MILESTONE && (
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-                    <Flag className="w-4 h-4 text-purple-500" /> 發展里程碑
-                </label>
-                <select
-                    value={milestoneId}
-                    onChange={(e) => setMilestoneId(e.target.value)}
-                    className="w-full p-3 rounded-xl bg-purple-50 border border-purple-200 focus:ring-2 focus:ring-purple-500 outline-none text-purple-800 font-medium"
-                >
-                    {MILESTONES.map(m => (
-                        <option key={m.id} value={m.id}>[{m.category}] {m.name}</option>
-                    ))}
-                </select>
+            <div className="space-y-4">
+                <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-purple-500 animate-pulse" /> 事件 / 時刻標題
+                    </label>
+                    <input
+                        type="text"
+                        value={momentTitle}
+                        onChange={(e) => setMomentTitle(e.target.value)}
+                        className="w-full p-3 rounded-xl bg-purple-50/50 border border-purple-100 focus:ring-2 focus:ring-purple-500 outline-none text-purple-900 font-bold placeholder-purple-300"
+                        placeholder="例如：第一次大笑、今日成功翻身、去公園玩"
+                        required
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">心情與狀態</label>
+                    <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                        {[
+                            { emoji: "😊", label: "開心" },
+                            { emoji: "🥰", label: "撒嬌" },
+                            { emoji: "😮", label: "好奇" },
+                            { emoji: "😢", label: "扭計" },
+                            { emoji: "😴", label: "累了" },
+                            { emoji: "🤪", label: "搞怪" },
+                            { emoji: "❤️", label: "得意" }
+                        ].map((item) => (
+                            <button
+                                key={item.emoji}
+                                type="button"
+                                onClick={() => setMomentEmoji(item.emoji)}
+                                className={`py-2 rounded-xl flex flex-col items-center gap-1 transition-all border-2 text-center select-none ${
+                                    momentEmoji === item.emoji 
+                                        ? 'border-purple-500 bg-purple-100/60 text-purple-700 font-black scale-105 shadow-sm' 
+                                        : 'border-transparent bg-gray-50 text-gray-400 hover:bg-gray-100'
+                                }`}
+                            >
+                                <span className="text-xl">{item.emoji}</span>
+                                <span className="text-[10px] tracking-tight">{item.label}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">細節點滴記述 (選填)</label>
+                    <textarea
+                        rows={3}
+                        value={momentNotes}
+                        onChange={(e) => setMomentNotes(e.target.value)}
+                        placeholder="今日 Jacob 發生咗啲咩呢？或者佢有啲咩情緒反應？"
+                        className="w-full p-3 rounded-xl bg-purple-50/30 border border-purple-100 focus:ring-2 focus:ring-purple-500 outline-none text-purple-950 placeholder-purple-300 text-sm leading-relaxed"
+                    />
+                </div>
             </div>
             )}
 

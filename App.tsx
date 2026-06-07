@@ -775,7 +775,7 @@ const App: React.FC = () => {
              </button>
           </div>
           <NavButton view="WEEKLY" icon={TrendingUp} label="週報" />
-          <NavButton view="MILESTONES" icon={Flag} label="里程碑" />
+          <NavButton view="MILESTONES" icon={Sparkles} label="生活點滴" />
           <NavButton view="HEALTH" icon={HeartPulse} label="健康紀錄" />
         </div>
       </nav>

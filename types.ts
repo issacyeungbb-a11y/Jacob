@@ -82,7 +82,9 @@ export interface VaccineLog extends BaseLog {
 
 export interface MilestoneLog extends BaseLog {
   type: LogType.MILESTONE;
-  milestoneId: string;
+  milestoneId?: string;
+  title?: string;
+  emoji?: string;
 }
 
 export interface WeeklyAIReport {

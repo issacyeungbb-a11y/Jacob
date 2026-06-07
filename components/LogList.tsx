@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { BabyLog, LogType, FeedLog, DiaperLog, SleepLog, HealthLog, OtherLog, SummaryLog, TummyTimeLog, VaccineLog, MilestoneLog, DiaperType } from '../types';
-import { Milk, Baby, Moon, Activity, Trash2, Edit2, StickyNote, Sunrise, Sun, Sunset, MoonStar, Clock, AlertTriangle, Smile, Meh, Frown, ClipboardCheck, Star, Timer, Syringe, Flag, X, Check } from 'lucide-react';
+import { Milk, Baby, Moon, Activity, Trash2, Edit2, StickyNote, Sunrise, Sun, Sunset, MoonStar, Clock, AlertTriangle, Smile, Meh, Frown, ClipboardCheck, Star, Timer, Syringe, Flag, X, Check, Sparkles } from 'lucide-react';
 import { HK_VACCINES, MILESTONES } from '../constants';
 
 interface LogListProps {
@@ -28,7 +28,7 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog, onUpdateLog
       case LogType.SUMMARY: return <ClipboardCheck className="w-5 h-5 text-amber-600" />;
       case LogType.TUMMY_TIME: return <Timer className="w-5 h-5 text-orange-500" />;
       case LogType.VACCINE: return <Syringe className="w-5 h-5 text-teal-500" />;
-      case LogType.MILESTONE: return <Flag className="w-5 h-5 text-purple-500" />;
+      case LogType.MILESTONE: return <Sparkles className="w-5 h-5 text-purple-500" />;
       default: return <AlertTriangle className="w-5 h-5 text-gray-400" />;
     }
   };
@@ -100,6 +100,7 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog, onUpdateLog
                             case LogType.DIAPER: (updatedLog as DiaperLog).status = editValue as DiaperType; break;
                             case LogType.OTHER: (updatedLog as OtherLog).details = editValue; break;
                             case LogType.TUMMY_TIME: (updatedLog as TummyTimeLog).durationMinutes = parseInt(editValue) || 0; break;
+                            case LogType.MILESTONE: (updatedLog as MilestoneLog).notes = editValue; break;
                         }
                         onUpdateLog(updatedLog);
                         setEditingLogId(null);
@@ -160,9 +161,26 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog, onUpdateLog
             const v = HK_VACCINES.find(x => x.id === vId);
             return v ? v.name : '未知疫苗';
         case LogType.MILESTONE:
-            const mId = (log as MilestoneLog).milestoneId;
+            const ml = log as MilestoneLog;
+            if (ml.title || ml.emoji) {
+                return (
+                    <div className="flex flex-col gap-1">
+                        <span className="font-extrabold text-purple-950 text-sm flex items-center gap-1.5 flex-wrap">
+                            {ml.emoji && <span className="text-base select-none leading-none">{ml.emoji}</span>}
+                            <span>{ml.title}</span>
+                        </span>
+                        {ml.notes && <p className="text-xs text-purple-800 leading-relaxed font-normal bg-purple-50/40 p-2 rounded-lg border border-purple-100/50 mt-1">{ml.notes}</p>}
+                    </div>
+                );
+            }
+            const mId = ml.milestoneId;
             const m = MILESTONES.find(x => x.id === mId);
-            return m ? `[${m.category}] ${m.name}` : '未知里程碑';
+            return m ? (
+                <div className="flex flex-col gap-0.5">
+                    <span className="font-bold text-gray-700">{`[${m.category}] ${m.name}`}</span>
+                    {ml.notes && <p className="text-xs text-gray-500 italic mt-0.5">{ml.notes}</p>}
+                </div>
+            ) : '未知里程碑';
         case LogType.SUMMARY:
             const sumLog = log as SummaryLog;
             return (
@@ -263,6 +281,7 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog, onUpdateLog
                               case LogType.DIAPER: setEditValue((log as DiaperLog).status || ''); break;
                               case LogType.OTHER: setEditValue((log as OtherLog).details || ''); break;
                               case LogType.TUMMY_TIME: setEditValue(String((log as TummyTimeLog).durationMinutes || '')); break;
+                              case LogType.MILESTONE: setEditValue((log as MilestoneLog).notes || (log as MilestoneLog).title || ''); break;
                               default: setEditValue('');
                           }
                       }
