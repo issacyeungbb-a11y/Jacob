@@ -394,9 +394,9 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
                 </div>
             </div>
 
-            <div className="flex relative h-[200px] border border-gray-50 rounded-xl overflow-hidden bg-slate-50/30">
+            <div className="flex relative h-[240px] border border-gray-50 rounded-xl overflow-hidden bg-slate-50/30">
                 {/* Y-Axis Labels (Fixed Left) */}
-                <div className="w-10 flex-shrink-0 flex flex-col justify-between text-[9px] text-gray-400 font-medium py-2 bg-white border-r border-gray-100 z-20 items-center select-none shadow-sm pb-[25px]">
+                <div className="w-10 flex-shrink-0 flex flex-col justify-between text-[9px] text-gray-400 font-medium bg-white border-r border-gray-100 z-20 items-center select-none shadow-sm self-end" style={{ height: '184px', paddingBottom: '24px' }}>
                     <span>{maxValue}</span>
                     <span>{Math.round(maxValue * 0.75)}</span>
                     <span>{Math.round(maxValue / 2)}</span>
@@ -408,7 +408,7 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
                 <div className="flex-1 overflow-x-auto no-scrollbar relative touch-pan-x">
                     <div className="h-full flex items-end min-w-full px-2 pb-6" style={{ width: `${Math.max(100, chartData.length * (daysRange === 30 ? 4 : (daysRange === 'ALL' ? 2 : 14)))}%` }}>
                         {/* Horizontal Grid Lines */}
-                        <div className="absolute inset-0 flex flex-col justify-between pointer-events-none z-0 py-2 pb-[25px]">
+                        <div className="absolute inset-x-0 bottom-[24px] h-[160px] flex flex-col justify-between pointer-events-none z-0">
                              <div className="border-t border-gray-200 w-full h-0 dashed opacity-30"></div>
                              <div className="border-t border-gray-200 w-full h-0 dashed opacity-30"></div>
                              <div className="border-t border-gray-200 w-full h-0 dashed opacity-30"></div>
@@ -425,6 +425,19 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
                             onTouchStart={() => setHoveredBarIndex(i)}
                             onClick={() => setHoveredBarIndex(hoveredBarIndex === i ? null : i)}
                         >
+                            {/* Persistent Small Value Label */}
+                            {d.value > 0 && typeof daysRange === 'number' && daysRange <= 14 && (
+                                <span 
+                                    className="absolute text-[10px] font-extrabold text-slate-500 pointer-events-none transition-opacity duration-200"
+                                    style={{ 
+                                        bottom: `${getBarHeight(d.value) + 26}px`,
+                                        opacity: hoveredBarIndex === i ? 0 : 1
+                                    }}
+                                >
+                                    {d.value}
+                                </span>
+                            )}
+
                             {/* Tooltip */}
                             <div 
                                 className={`absolute left-1/2 -translate-x-1/2 transition-all duration-200 z-30 pointer-events-none mb-1 ${
@@ -432,7 +445,7 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
                                         ? 'opacity-100 scale-100 translate-y-0' 
                                         : 'opacity-0 scale-95 translate-y-1 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0'
                                 }`}
-                                style={{ bottom: `${getBarHeight(d.value) + 12}px` }}
+                                style={{ bottom: `${getBarHeight(d.value) + 36}px` }}
                             >
                                 <div className="relative">
                                     <div className="bg-gray-900/95 backdrop-blur-sm text-white text-[10.5px] font-bold px-2.5 py-1 rounded-xl shadow-lg whitespace-nowrap flex flex-col items-center border border-gray-800">
@@ -455,7 +468,7 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
                                 {shouldShowLabel(i) && (
                                 <span className={`text-[9px] whitespace-nowrap transform ${daysRange !== 7 ? 'scale-90' : ''} ${
                                     new Date().getDate() === new Date(d.date).getDate() ? 'text-gray-800 font-bold' : 'text-gray-400'
-                                }`}>
+                                }}`}>
                                     {d.displayDate}
                                 </span>
                                 )}
