@@ -682,10 +682,13 @@ const App: React.FC = () => {
               )}
 
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6 pointer-events-none">
-                 <p className="text-white/90 text-sm font-bold mb-1 tracking-wide">來到地球的</p>
+                 <p className="text-white/90 text-sm font-bold mb-1 tracking-wide">
+                    {daysSinceBirth < 0 ? '距離同你見面' : '來到地球的'}
+                 </p>
                  <h2 className="text-white text-5xl font-black tracking-tighter drop-shadow-sm">
-                    第 {Math.abs(daysSinceBirth)} 天
-                    {daysSinceBirth < 0 && <span className="text-sm font-medium opacity-70 ml-2">(倒數中)</span>}
+                    {daysSinceBirth < 0
+                      ? <>仲有 {Math.abs(daysSinceBirth)} 天</>
+                      : <>第 {daysSinceBirth} 天</>}
                  </h2>
               </div>
             </div>
