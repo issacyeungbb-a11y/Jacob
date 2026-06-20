@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { BabyLog, LogType, MilestoneLog } from '../types';
-import { MILESTONES, BIRTH_DATE } from '../constants';
+import { MILESTONES } from '../constants';
+import { BIRTH_DATE, BABY_NAME } from '../services/config';
 import { Flag, Sparkles, ChevronDown, ChevronUp, Calendar, Heart } from 'lucide-react';
 
 interface MilestoneTrackerProps {
@@ -78,7 +79,7 @@ export const MilestoneTracker: React.FC<MilestoneTrackerProps> = ({ logs }) => {
               成長點滴札記
             </h3>
             <p className="text-xs text-purple-400 mt-1">
-              Jacob 成長過程中的特別時刻、趣事、情緒氣氛或隨手日常生活記錄。
+              {BABY_NAME} 成長過程中的特別時刻、趣事、情緒氣氛或隨手日常生活記錄。
             </p>
           </div>
           <span className="text-xs text-purple-600 bg-purple-50 border border-purple-100 px-3 py-1 rounded-full font-bold flex items-center gap-1">
@@ -119,7 +120,7 @@ export const MilestoneTracker: React.FC<MilestoneTrackerProps> = ({ logs }) => {
                       {/* Age and Date Badge */}
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-[10px] sm:text-xs font-black text-purple-600 bg-purple-50 border border-purple-100/50 px-2 py-0.5 rounded-md whitespace-nowrap">
-                          當時 Jacob {calculateAgeAtTime(log.timestamp)}
+                          當時 {BABY_NAME} {calculateAgeAtTime(log.timestamp)}
                         </span>
                       </div>
                     </div>
@@ -148,7 +149,7 @@ export const MilestoneTracker: React.FC<MilestoneTrackerProps> = ({ logs }) => {
         ) : (
           <div className="text-center py-12 px-6 bg-slate-50 border border-dashed border-gray-200 rounded-2xl max-w-lg mx-auto">
             <span className="text-4xl block mb-3 select-none">✍️</span>
-            <h4 className="font-extrabold text-gray-600 mb-2">記錄 Jacob 的第一個感動</h4>
+            <h4 className="font-extrabold text-gray-600 mb-2">記錄 {BABY_NAME} 的第一個感動</h4>
             <p className="text-xs text-gray-400 max-w-sm mx-auto leading-relaxed">
               尚未有成長點滴記錄。在下方的「成長點滴」分頁即可新增特別的回事、生活趣事或出遊心情唷！
             </p>
