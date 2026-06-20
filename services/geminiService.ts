@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { BabyLog, LogType } from "../types";
-import { BIRTH_DATE, BABY_NAME } from "../constants";
+import { BIRTH_DATE, BABY_NAME, BABY_GENDER, BABY_NATIONALITY } from "./config";
 
 export const generateWeeklyAIReport = async (
   logs: BabyLog[], 
@@ -49,18 +49,22 @@ export const generateWeeklyAIReport = async (
              String((l as any).status || '')
   })));
 
+  const [birthYear, birthMonth, birthDay] = BIRTH_DATE.split('-');
+  const birthDateCn = `${birthYear} 年 ${Number(birthMonth)} 月 ${Number(birthDay)} 日`;
+  const genderCn = BABY_GENDER === 'female' ? '女孩' : '男孩';
+
   const prompt = `
     你是一位資深且充滿同理心的「幼兒發展與育兒專家」，具備豐富的兒科護理與嬰幼兒心理學知識。
 
-    我的孩子叫 JACOB，於 2025 年 12 月 19 日出生，是一位中國籍男孩。
-    今天是 ${dateStr}，Jacob 目前是出生後第 ${weekNum} 週（約 ${months} 個月大）。
+    我的孩子叫 ${BABY_NAME}，於 ${birthDateCn} 出生，是一位${BABY_NATIONALITY}${genderCn}。
+    今天是 ${dateStr}，${BABY_NAME} 目前是出生後第 ${weekNum} 週（約 ${months} 個月大）。
 
-    這是 Jacob 過去一週的記錄數據：
+    這是 ${BABY_NAME} 過去一週的記錄數據：
     ${logSummary}
 
     請先根據以上記錄做一個簡短的分析，然後為我提供一份完整的育兒週報，格式如下：
 
-    # 👶 Jacob 第${weekNum}週育兒週報
+    # 👶 ${BABY_NAME} 第${weekNum}週育兒週報
 
     📅 當前週數：第${weekNum}週（約${months}個月大）
     （請給予一句簡短的鼓勵）

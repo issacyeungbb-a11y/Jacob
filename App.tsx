@@ -57,7 +57,7 @@ import {
   Sparkles,
   BrainCircuit
 } from 'lucide-react';
-import { BABY_NAME, BIRTH_DATE } from './constants';
+import { BABY_NAME, BIRTH_DATE, PROFILE_IMAGE } from './services/config';
 import { WeeklyAIReport } from './types';
 import ReactMarkdown from 'react-markdown';
 
@@ -75,7 +75,7 @@ const App: React.FC = () => {
            </div>
            <h1 className="text-2xl font-black text-gray-800 mb-4">尚未連結資料庫</h1>
            <p className="text-gray-600 mb-6 leading-relaxed">
-             Jacob 的成長日記需要 Firebase 來同步您的資料。
+             {BABY_NAME} 的成長日記需要 Firebase 來同步您的資料。
            </p>
            <div className="bg-gray-50 p-5 rounded-xl border border-gray-200 text-left text-sm mb-6">
               <p className="font-bold mb-2">請執行以下操作：</p>
@@ -180,7 +180,7 @@ const App: React.FC = () => {
       const months = parseFloat((diffTime / (30.44 * 24 * 60 * 60 * 1000)).toFixed(1));
       
       // Calculate the trigger time for the current week (Friday 20:00 HKT)
-      // Since Jacob was born on a Friday, each week starts on a Friday.
+      // 每一週由 BB 出生當天嘅星期幾起計（Jacob 出生喺星期五，故每週由星期五開始）。
       const weekStartTime = birth.getTime() + (weekNum - 1) * 7 * 24 * 60 * 60 * 1000;
       const triggerTime = new Date(weekStartTime);
       // 20:00 HKT is 12:00 UTC
@@ -283,7 +283,7 @@ const App: React.FC = () => {
 
   const handleStartSleep = async (startTime: string) => {
     await setSleepStatus(startTime);
-    showToast("早抖 Jacob！💤");
+    showToast(`早抖 ${BABY_NAME}！💤`);
   };
 
   const handleEndSleep = async (log: BabyLog) => {
@@ -473,14 +473,14 @@ const App: React.FC = () => {
   const displayImageSrc = useMemo(() => {
     if (customImage) return customImage;
     if (imgError) return 'https://images.unsplash.com/photo-1519689680058-324335c77eba?q=80&w=2070&auto=format&fit=crop';
-    return `/jacob.jpg?t=${imgTimestamp}`;
+    return `${PROFILE_IMAGE}?t=${imgTimestamp}`;
   }, [customImage, imgError, imgTimestamp]);
 
   if (isLoading) {
       return (
           <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
               <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
-              <p className="text-gray-500 font-medium animate-pulse">正在同步 Jacob 的資料...</p>
+              <p className="text-gray-500 font-medium animate-pulse">正在同步 {BABY_NAME} 的資料...</p>
           </div>
       );
   }
@@ -501,7 +501,7 @@ const App: React.FC = () => {
               <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden">
                   <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white text-center">
                       <HelpCircle className="w-12 h-12 mx-auto mb-2 opacity-90" />
-                      <h3 className="text-xl font-black">Jacob 正在睡覺</h3>
+                      <h3 className="text-xl font-black">{BABY_NAME} 正在睡覺</h3>
                       <p className="text-blue-100 text-sm mt-1">這筆記錄是否代表他已經醒了？</p>
                   </div>
                   <div className="p-6 space-y-3">
@@ -546,7 +546,7 @@ const App: React.FC = () => {
                           <Sparkles className="w-6 h-6 text-amber-900" />
                         </div>
                         <div>
-                          <h3 className="text-xl font-black tracking-tight">Jacob 第 {latestReport.weekNum} 週 AI 深度週報</h3>
+                          <h3 className="text-xl font-black tracking-tight">{BABY_NAME} 第 {latestReport.weekNum} 週 AI 深度週報</h3>
                           <p className="text-indigo-100 text-xs font-bold">{latestReport.dateRange}</p>
                         </div>
                       </div>
@@ -615,7 +615,7 @@ const App: React.FC = () => {
               <img 
                 key={customImage ? 'custom' : imgTimestamp} 
                 src={displayImageSrc}
-                alt="Baby Jacob" 
+                alt={`Baby ${BABY_NAME}`}
                 className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 ${(!customImage && imgError) || isProcessingImg ? 'opacity-50' : 'opacity-100'}`}
                 onError={(e) => {
                   console.warn("Image load failed");
@@ -682,10 +682,13 @@ const App: React.FC = () => {
               )}
 
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6 pointer-events-none">
-                 <p className="text-white/90 text-sm font-bold mb-1 tracking-wide">來到地球的</p>
+                 <p className="text-white/90 text-sm font-bold mb-1 tracking-wide">
+                    {daysSinceBirth < 0 ? '距離同你見面' : '來到地球的'}
+                 </p>
                  <h2 className="text-white text-5xl font-black tracking-tighter drop-shadow-sm">
-                    第 {Math.abs(daysSinceBirth)} 天
-                    {daysSinceBirth < 0 && <span className="text-sm font-medium opacity-70 ml-2">(倒數中)</span>}
+                    {daysSinceBirth < 0
+                      ? <>仲有 {Math.abs(daysSinceBirth)} 天</>
+                      : <>第 {daysSinceBirth} 天</>}
                  </h2>
               </div>
             </div>
