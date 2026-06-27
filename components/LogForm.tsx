@@ -3,7 +3,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { LogType, FeedType, DiaperType, BabyLog, HealthLog, SleepQuality, TummyTimeLog, VaccineLog, MilestoneLog } from '../types';
 import { PlusCircle, CalendarDays, Moon, Play, Square, History, Weight, Ruler, Activity, Clock, Smile, Meh, Frown, Timer, Syringe, Flag, Sparkles } from 'lucide-react';
 import { HK_VACCINES, MILESTONES } from '../constants';
-import { BABY_NAME } from '../services/config';
 
 interface LogFormProps {
   onAddLog: (log: BabyLog) => void;
@@ -256,7 +255,7 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
                  <div className="bg-indigo-50 p-6 rounded-2xl text-center border border-indigo-100">
                     {isSleeping ? (
                         <>
-                           <div className="mb-4 text-indigo-800 font-bold">{BABY_NAME} 正在睡覺...</div>
+                           <div className="mb-4 text-indigo-800 font-bold">Jacob 正在睡覺...</div>
                            <label className="block text-xs text-indigo-400 mb-1 text-left">起床時間</label>
                            <input
                                 type="datetime-local"
@@ -609,7 +608,7 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
                         rows={3}
                         value={momentNotes}
                         onChange={(e) => setMomentNotes(e.target.value)}
-                        placeholder={`今日 ${BABY_NAME} 發生咗啲咩呢？或者佢有啲咩情緒反應？`}
+                        placeholder="今日 Jacob 發生咗啲咩呢？或者佢有啲咩情緒反應？"
                         className="w-full p-3 rounded-xl bg-purple-50/30 border border-purple-100 focus:ring-2 focus:ring-purple-500 outline-none text-purple-950 placeholder-purple-300 text-sm leading-relaxed"
                     />
                 </div>

@@ -2,8 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { BabyLog, LogType, HealthLog } from '../types';
 import { Activity, Weight, Ruler, Info } from 'lucide-react';
-import { WHO_MEDIAN } from '../constants';
-import { BIRTH_DATE, BABY_NAME } from '../services/config';
+import { WHO_BOYS_MEDIAN, BIRTH_DATE } from '../constants';
 
 interface HealthChartProps {
   logs: BabyLog[];
@@ -18,7 +17,7 @@ export const HealthChart: React.FC<HealthChartProps> = ({ logs }) => {
     const healthLogs = logs.filter(l => l.type === LogType.HEALTH) as HealthLog[];
     
     const getWHOMedian = (m: HealthMetric, ageMonths: number) => {
-        const arr = WHO_MEDIAN[m];
+        const arr = WHO_BOYS_MEDIAN[m];
         if (ageMonths <= 0) return arr[0];
         if (ageMonths >= arr.length - 1) return arr[arr.length - 1];
         const lower = Math.floor(ageMonths);
@@ -109,7 +108,7 @@ export const HealthChart: React.FC<HealthChartProps> = ({ logs }) => {
             <div className="flex items-center justify-end gap-4 text-[10px] text-gray-500 mb-2 absolute right-0 -top-6">
                 <div className="flex items-center gap-1">
                     <div className="w-3 h-0.5 bg-emerald-500 rounded-full"></div>
-                    <span>{BABY_NAME}</span>
+                    <span>Jacob</span>
                 </div>
                 <div className="flex items-center gap-1">
                     <div className="w-3 h-0.5 border-t-2 border-dashed border-gray-400"></div>

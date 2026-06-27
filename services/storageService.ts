@@ -10,15 +10,12 @@ import {
   orderBy 
 } from 'firebase/firestore';
 import { BabyLog, WeeklyAIReport } from '../types';
-import {
-  COLLECTION_NAME,
-  SETTINGS_COLLECTION,
-  WEEKLY_REPORTS_COLLECTION,
-  DATA_PREFIX,
-} from './config';
 
+const COLLECTION_NAME = 'jacob_logs';
+const SETTINGS_COLLECTION = 'jacob_settings';
 const PHOTO_DOC_ID = 'profile_photo';
 const STATUS_DOC_ID = 'status_sleep';
+const WEEKLY_REPORTS_COLLECTION = 'jacob_weekly_reports';
 
 // 監聽週報
 export const subscribeToWeeklyReports = (onUpdate: (reports: WeeklyAIReport[]) => void) => {
@@ -193,7 +190,7 @@ export const exportLogsToJSON = (logs: BabyLog[]) => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `${DATA_PREFIX}_logs_${new Date().toISOString().split('T')[0]}.json`;
+  link.download = `jacob_logs_${new Date().toISOString().split('T')[0]}.json`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

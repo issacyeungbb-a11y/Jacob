@@ -1,7 +1,6 @@
 
-import { BABY_GENDER } from './services/config';
-
-// 注意：BABY_NAME / BIRTH_DATE 已搬去 services/config.ts（環境變數驅動）。
+export const BABY_NAME = "Jacob";
+export const BIRTH_DATE = "2025-12-19";
 
 // 定義夜間睡眠時段 (24小時制)
 export const NIGHT_START_HOUR = 21; // 晚上 9 點
@@ -21,17 +20,6 @@ export const WHO_BOYS_MEDIAN = {
   HEIGHT: [49.9, 54.7, 58.4, 61.4, 63.9, 65.9, 67.6, 69.2, 70.6, 72.0, 73.3, 74.5, 75.7], // cm
   HEAD: [34.5, 37.3, 39.1, 40.5, 41.5, 42.2, 42.8, 43.3, 43.8, 44.2, 44.6, 44.9, 45.3] // cm
 };
-
-// WHO Child Growth Standards (Girls, 0-12 months) - Median (50th percentile)
-// Source: World Health Organization (WHO)
-export const WHO_GIRLS_MEDIAN = {
-  WEIGHT: [3.2, 4.2, 5.1, 5.8, 6.4, 6.9, 7.3, 7.6, 7.9, 8.2, 8.5, 8.7, 8.9], // kg
-  HEIGHT: [49.1, 53.7, 57.1, 59.8, 62.1, 64.0, 65.7, 67.3, 68.7, 70.1, 71.5, 72.8, 74.0], // cm
-  HEAD: [33.9, 36.5, 38.3, 39.5, 40.6, 41.5, 42.2, 42.8, 43.4, 43.8, 44.2, 44.6, 44.9] // cm
-};
-
-// 根據 BB 性別選用對應嘅 WHO 生長標準（成長曲線基準線）
-export const WHO_MEDIAN = BABY_GENDER === 'female' ? WHO_GIRLS_MEDIAN : WHO_BOYS_MEDIAN;
 
 // HK Department of Health - Childhood Immunisation Programme
 // Source: Family Health Service, Department of Health, HKSAR
