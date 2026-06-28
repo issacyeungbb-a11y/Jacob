@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { BabyLog, LogType, FeedLog, SleepLog, DiaperLog, WeeklyAIReport } from '../types';
 import { Calendar, Milk, Moon, Baby, TrendingUp, Info, Sparkles, BrainCircuit, Loader2, ChevronRight, ChevronLeft, Clock, Trash2, RefreshCw } from 'lucide-react';
-import { BIRTH_DATE, BABY_NAME } from '../constants';
+import { BIRTH_DATE, BABY_NAME } from '../services/config';
 import { generateWeeklyAIReport } from '../services/geminiService';
 import { saveWeeklyReport, subscribeToWeeklyReports, deleteWeeklyReport } from '../services/storageService';
 import ReactMarkdown from 'react-markdown';
@@ -132,7 +132,7 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
           </h2>
           <div className="space-y-2">
             <p className="text-indigo-100 text-sm leading-relaxed">
-              每週五晚上 8:00 自動解鎖，為 Jacob 提供最專業的成長分析與育兒建議。
+              每週五晚上 8:00 自動解鎖，為 {BABY_NAME} 提供最專業的成長分析與育兒建議。
             </p>
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
               <Clock className="w-3 h-3 text-amber-300" />
@@ -161,7 +161,7 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
           <div className="bg-white rounded-3xl p-8 text-center border border-indigo-100 shadow-sm space-y-4 animate-pulse">
             <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto" />
             <div className="space-y-2">
-              <p className="font-black text-indigo-900">正在為 Jacob 編寫第 {currentWeekInfo.weekNum} 週週報</p>
+              <p className="font-black text-indigo-900">正在為 {BABY_NAME} 編寫第 {currentWeekInfo.weekNum} 週週報</p>
               <p className="text-xs text-gray-500">AI 正在分析本週數據，請稍候...</p>
             </div>
           </div>
@@ -173,7 +173,7 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
             <div className="space-y-2">
               <p className="font-black text-indigo-900 text-sm">第 {currentWeekInfo.weekNum} 週週報</p>
               <p className="text-[10px] text-indigo-600 font-medium">
-                Jacob 的第 {currentWeekInfo.weekNum} 週分析已準備就緒。
+                {BABY_NAME} 的第 {currentWeekInfo.weekNum} 週分析已準備就緒。
               </p>
             </div>
             <button
@@ -235,7 +235,7 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
             <div className="space-y-1">
               <p className="font-black text-amber-800">首份週報編寫中</p>
               <p className="text-xs text-amber-600 leading-relaxed">
-                Jacob 的第一份 AI 深度週報將於以下時間解鎖：<br/>
+                {BABY_NAME} 的第一份 AI 深度週報將於以下時間解鎖：<br/>
                 <span className="font-black text-amber-700">{currentWeekInfo.thisFridayHKT.getUTCMonth() + 1}月{currentWeekInfo.thisFridayHKT.getUTCDate()}日 20:00</span>
               </p>
             </div>
