@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
-import { BabyLog, LogType } from "../types";
+import { BabyLog, LogType, FeedType, DiaperType, FeedLog, SleepLog, DiaperLog, HealthLog, SummaryLog, MilestoneLog, OtherLog, VaccineLog } from "../types";
 import { BIRTH_DATE, BABY_NAME, BABY_GENDER, BABY_NATIONALITY } from "./config";
+import { HK_VACCINES, MILESTONES } from "../constants";
 
 export const generateWeeklyAIReport = async (
   logs: BabyLog[], 
@@ -39,75 +40,164 @@ export const generateWeeklyAIReport = async (
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   const recentLogs = logs.filter(log => new Date(log.timestamp) > sevenDaysAgo);
 
+  const fmtDate = (ts: string) => {
+    try { return new Date(ts).toLocaleDateString('zh-HK', { month: 'numeric', day: 'numeric' }); }
+    catch { return ''; }
+  };
+
   const logSummary = JSON.stringify(recentLogs.map(l => ({
     type: String(l.type || ''),
     time: String(l.timestamp || ''),
-    details: l.type === LogType.FEED ? `${(l as any).amountMl}ml` : 
-             l.type === LogType.HEALTH ? `重:${(l as any).weightKg}kg` : 
-             l.type === LogType.SLEEP ? `${(l as any).durationMinutes}分` : 
-             l.type === LogType.OTHER ? String((l as any).details || '') :
-             String((l as any).status || '')
+    details: l.type === LogType.FEED ? `${(l as FeedLog).amountMl ?? ''}ml ${(l as FeedLog).feedType || ''}` :
+             l.type === LogType.HEALTH ? `重:${(l as HealthLog).weightKg ?? '-'}kg 高:${(l as HealthLog).heightCm ?? '-'}cm` :
+             l.type === LogType.SLEEP ? `${(l as SleepLog).durationMinutes ?? 0}分` :
+             l.type === LogType.OTHER ? String((l as OtherLog).details || '') :
+             String((l as any).status || (l as any).title || '')
   })));
+
+  // ── 分類本週記錄，計統計 + 抽出家長記低嘅特別事件 ──────────────────────
+  const feeds = recentLogs.filter(l => l.type === LogType.FEED) as FeedLog[];
+  const sleeps = recentLogs.filter(l => l.type === LogType.SLEEP) as SleepLog[];
+  const diapers = recentLogs.filter(l => l.type === LogType.DIAPER) as DiaperLog[];
+  const healths = (recentLogs.filter(l => l.type === LogType.HEALTH) as HealthLog[])
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  const summaries = recentLogs.filter(l => l.type === LogType.SUMMARY) as SummaryLog[];
+  const milestones = recentLogs.filter(l => l.type === LogType.MILESTONE) as MilestoneLog[];
+  const others = recentLogs.filter(l => l.type === LogType.OTHER) as OtherLog[];
+  const vaccines = recentLogs.filter(l => l.type === LogType.VACCINE) as VaccineLog[];
+
+  const totalMl = feeds.reduce((s, f) => s + (f.amountMl || 0), 0);
+  const totalSleepHrs = sleeps.reduce((s, x) => s + (x.durationMinutes || 0), 0) / 60;
+  const nightWakings = summaries.reduce((s, x) => s + (x.nightWakings || 0), 0);
+  const latestHealth = healths[0];
+
+  const stats = {
+    "期間": "最近 7 日",
+    "餵奶次數": feeds.length,
+    "餵奶總量ml": totalMl,
+    "母乳次數": feeds.filter(f => f.feedType === FeedType.BREAST).length,
+    "配方奶次數": feeds.filter(f => f.feedType === FeedType.FORMULA).length,
+    "副食品次數": feeds.filter(f => f.feedType === FeedType.SOLIDS).length,
+    "睡眠段數": sleeps.length,
+    "睡眠總時數": Number(totalSleepHrs.toFixed(1)),
+    "平均每日睡眠時數": Number((totalSleepHrs / 7).toFixed(1)),
+    "夜醒次數": nightWakings,
+    "換片次數": diapers.length,
+    "小便次數": diapers.filter(d => d.status === DiaperType.WET).length,
+    "大便次數": diapers.filter(d => d.status === DiaperType.DIRTY).length,
+    "最新體重kg": latestHealth?.weightKg ?? null,
+    "最新身高cm": latestHealth?.heightCm ?? null,
+    "最新頭圍cm": latestHealth?.headCircumferenceCm ?? null,
+    "里程碑數": milestones.length,
+  };
+
+  const notable: string[] = [];
+  milestones.forEach(m => {
+    const name = m.title || (m.milestoneId ? MILESTONES.find(x => x.id === m.milestoneId)?.name : '') || '成長點滴';
+    notable.push(`🌟 ${m.emoji || ''}${name}${m.notes ? ` — ${m.notes}` : ''}（${fmtDate(m.timestamp)}）`);
+  });
+  feeds.filter(f => f.solidFoodName).forEach(f => {
+    notable.push(`🥣 副食品：${f.solidFoodName}${f.solidFoodAmount ? ` ${f.solidFoodAmount}` : ''}（${fmtDate(f.timestamp)}）`);
+  });
+  vaccines.forEach(v => {
+    const vn = HK_VACCINES.find(x => x.id === v.vaccineId)?.name || v.vaccineId;
+    notable.push(`💉 接種疫苗：${vn}（${fmtDate(v.timestamp)}）`);
+  });
+  others.forEach(o => {
+    if (o.details) notable.push(`📝 ${o.details}（${fmtDate(o.timestamp)}）`);
+  });
+  recentLogs.forEach(l => {
+    if (l.notes && l.type !== LogType.MILESTONE && l.type !== LogType.OTHER) {
+      notable.push(`🗒️ ${l.notes}（${fmtDate(l.timestamp)}）`);
+    }
+  });
+  const notableText = notable.length ? notable.join('\n') : '（本週未有特別文字記錄）';
 
   const [birthYear, birthMonth, birthDay] = BIRTH_DATE.split('-');
   const birthDateCn = `${birthYear} 年 ${Number(birthMonth)} 月 ${Number(birthDay)} 日`;
   const genderCn = BABY_GENDER === 'female' ? '女孩' : '男孩';
 
   const prompt = `
-    你是一位資深且充滿同理心的「幼兒發展與育兒專家」，具備豐富的兒科護理與嬰幼兒心理學知識。
+你是一位資深且充滿同理心的「幼兒發展與育兒專家」，具備豐富的兒科護理與嬰幼兒心理學知識。
 
-    我的孩子叫 ${BABY_NAME}，於 ${birthDateCn} 出生，是一位${BABY_NATIONALITY}${genderCn}。
-    今天是 ${dateStr}，${BABY_NAME} 目前是出生後第 ${weekNum} 週（約 ${months} 個月大）。
+我的孩子叫 ${BABY_NAME}，於 ${birthDateCn} 出生，是一位${BABY_NATIONALITY}${genderCn}。
+今天是 ${dateStr}，${BABY_NAME} 目前是出生後第 ${weekNum} 週（約 ${months} 個月大）。
 
-    這是 ${BABY_NAME} 過去一週的記錄數據：
-    ${logSummary}
+以下係 ${BABY_NAME} 本週（最近 7 日）嘅實際記錄：
 
-    請先根據以上記錄做一個簡短的分析，然後為我提供一份完整的育兒週報，格式如下：
+【數據統計】
+${JSON.stringify(stats, null, 2)}
 
-    # 👶 ${BABY_NAME} 第${weekNum}週育兒週報
+【家長親自記低嘅特別時刻／備註／事件】
+${notableText}
 
-    📅 當前週數：第${weekNum}週（約${months}個月大）
-    （請給予一句簡短的鼓勵）
+【原始記錄摘要】
+${logSummary}
 
-    ## 🌟 發展四大範疇里程碑
-    ### 💪 動作發展
-    (粗/細動作表現，請詳細說明)
+寫作要求（非常重要）：
+1. 必須根據以上實際數據去寫，帶出「本週」嘅具體情況，唔好講空泛、每週都一樣嘅教科書式內容。
+2. 每一週都要揀一個唔同嘅切入點，帶出本週獨特之處；如果數據唔多，就老實聚焦喺有記錄嘅嘢，切勿虛構未發生嘅事。
+3. 引用返家長親自記低嘅特別時刻／備註（如有）。
+4. 語氣溫暖、鼓勵、具同理心；資訊要有科學根據與醫學正確性（參考 WHO 或兒科醫學會指引）。
 
-    ### 🧠 認知發展
-    (大腦發育與探索行為，請詳細說明)
+請用以下格式輸出（Markdown，繁體中文）：
 
-    ### 🗣️ 語言溝通
-    (發聲與溝通前兆，請詳細說明)
+# 👶 ${BABY_NAME} 第${weekNum}週育兒週報
 
-    ### ❤️ 社會情緒
-    (情緒表達與依附關係，請詳細說明)
+📅 當前週數：第${weekNum}週（約${months}個月大）
+（一句貼合本週數據嘅簡短鼓勵）
 
-    ## 🍼 本週照顧需要與重點
-    ### 🍽️ 飲食餵養
-    (奶量、副食品進度或注意事項，請詳細說明)
+## 📌 本週最值得留意嘅 1–3 件事
+（根據實際數據同家長記錄，具體指出本週最突出嘅 1 至 3 個重點）
 
-    ### 💤 睡眠作息
-    (睡眠總時數、日夜作息建議，請詳細說明)
+## ✨ 本週亮點／突破
+（由數據變化或家長記低嘅特別時刻，指出一個新進展或突破；若未見明顯突破，溫和講出穩步發展並點出可期待嘅下一步）
 
-    ### 🛡️ 護理與安全
-    (當週特別需要的生理護理或環境防護，請詳細說明)
+## 🌟 發展四大範疇觀察
+### 💪 動作發展
+### 🧠 認知發展
+### 🗣️ 語言溝通
+### ❤️ 社會情緒
+（每項盡量結合本週實際情況；若無相關記錄就簡短帶過，並列為下週可留意）
 
-    ## 🧸 親子互動建議
-    (具體可行的互動方式或小遊戲，1-2個，請詳細說明)
+## 🍼 本週照顧重點
+### 🍽️ 飲食餵養（結合餵奶次數／奶量／副食品數據）
+### 💤 睡眠作息（結合睡眠時數／夜醒數據）
+### 🛡️ 護理與安全
 
-    ## 💡 專家小叮囑
-    (本週特別需要注意的事項或疑苗/健檢提醒，請詳細說明)
+## 🧪 本週小實驗（新嘗試）
+（一個具體、啱約 ${months} 個月大、同過往唔同嘅親子遊戲或刺激活動）
 
-    資訊必須具備科學根據與醫學正確性（參考 WHO 或兒科醫學會指引）。
-    語氣溫暖、鼓勵、具同理心。
+## 🧸 親子互動建議
+（1–2 個具體可行嘅互動方式）
+
+## 💡 專家小叮囑
+（本週特別需要注意嘅事項，或疫苗／健檢提醒）
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.1-pro-preview',
-      contents: prompt,
-    });
-    
+    // 主用 Gemini 3 Flash（性價比最佳、免費層 cover）；若型號 id 唔存在則退到最新穩定 Flash
+    const models = ['gemini-3-flash', 'gemini-flash-latest'];
+    let response: any;
+    let lastErr: any;
+    for (const model of models) {
+      try {
+        response = await ai.models.generateContent({
+          model,
+          contents: prompt,
+          config: { temperature: 0.9 },
+        });
+        break;
+      } catch (e: any) {
+        lastErr = e;
+        const msg = String(e?.message || '');
+        // 只喺「型號唔存在／唔支援」先試下一個；其他錯誤即刻拋出
+        if (/not found|not support|does not exist|unknown model|NOT_FOUND|404/i.test(msg)) continue;
+        throw e;
+      }
+    }
+    if (!response) throw lastErr || new Error("生成失敗");
+
     if (!response.text) {
         throw new Error("AI 返回了空白內容。");
     }
