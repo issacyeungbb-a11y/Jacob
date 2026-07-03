@@ -374,15 +374,13 @@ const App: React.FC = () => {
     return days;
   }, []);
 
-  // 出生後嘅年齡拆做「幾多個月幾多日」（同 MilestoneTracker 嘅 calculateAgeAtTime 一致寫法）
+  // 出生後嘅年齡拆做「幾多個月幾多日」，用返同「第 N 天」一致嘅數字，等兩個數字對得上
   const ageBreakdown = useMemo(() => {
-    const birth = getBirthDate();
-    const now = new Date();
-    const diffDays = Math.max(0, Math.floor((now.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24)));
-    const months = Math.floor(diffDays / 30.4375);
-    const days = Math.floor(diffDays % 30.4375);
+    const displayDay = Math.max(0, daysSinceBirth + 1);
+    const months = Math.floor(displayDay / 30.4375);
+    const days = Math.floor(displayDay % 30.4375);
     return { months, days };
-  }, []);
+  }, [daysSinceBirth]);
 
   const handleRetryImage = (e: React.MouseEvent) => {
     e.stopPropagation();
