@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { BabyLog, LogType, FeedLog, SleepLog, DiaperLog, WeeklyAIReport } from '../types';
 import { Calendar, Milk, Moon, Baby, TrendingUp, Info, Sparkles, BrainCircuit, Loader2, ChevronRight, ChevronLeft, Clock, Trash2, RefreshCw } from 'lucide-react';
-import { BIRTH_DATE, BABY_NAME } from '../services/config';
+import { BABY_NAME, getBirthDate } from '../services/config';
 import { generateWeeklyAIReport } from '../services/geminiService';
 import { saveWeeklyReport, subscribeToWeeklyReports, deleteWeeklyReport } from '../services/storageService';
 import ReactMarkdown from 'react-markdown';
@@ -23,7 +23,7 @@ export const WeeklyReport: React.FC<WeeklyReportProps> = ({ logs, isGenerating =
   }, []);
 
   const currentWeekInfo = useMemo(() => {
-    const birth = new Date(BIRTH_DATE);
+    const birth = getBirthDate();
     const now = new Date();
     
     const diffTime = now.getTime() - birth.getTime();

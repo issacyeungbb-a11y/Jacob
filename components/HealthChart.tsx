@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { BabyLog, LogType, HealthLog } from '../types';
 import { Activity, Weight, Ruler, Info } from 'lucide-react';
 import { WHO_MEDIAN } from '../constants';
-import { BIRTH_DATE, BABY_NAME } from '../services/config';
+import { BABY_NAME, getBirthDate } from '../services/config';
 
 interface HealthChartProps {
   logs: BabyLog[];
@@ -36,7 +36,7 @@ export const HealthChart: React.FC<HealthChartProps> = ({ logs }) => {
         if (metric === 'HEAD') value = l.headCircumferenceCm || 0;
         
         const logDate = new Date(l.timestamp);
-        const birth = new Date(BIRTH_DATE);
+        const birth = getBirthDate();
         const ageInMonths = (logDate.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 30.4375);
         const whoMedian = getWHOMedian(metric, ageInMonths);
 

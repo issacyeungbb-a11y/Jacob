@@ -57,7 +57,7 @@ import {
   Sparkles,
   BrainCircuit
 } from 'lucide-react';
-import { BABY_NAME, BIRTH_DATE, PROFILE_IMAGE } from './services/config';
+import { BABY_NAME, PROFILE_IMAGE, getBirthDate } from './services/config';
 import { WeeklyAIReport } from './types';
 import ReactMarkdown from 'react-markdown';
 
@@ -172,7 +172,7 @@ const App: React.FC = () => {
     // 4. 訂閱週報並檢查是否需要彈出
     const checkWeeklyReport = async (reports: WeeklyAIReport[]) => {
       // Calculate current week info
-      const birth = new Date(BIRTH_DATE);
+      const birth = getBirthDate();
       const now = new Date();
       
       const diffTime = now.getTime() - birth.getTime();
@@ -367,7 +367,7 @@ const App: React.FC = () => {
 
   // Calculate Days Since Birth
   const daysSinceBirth = useMemo(() => {
-    const birth = new Date(BIRTH_DATE);
+    const birth = getBirthDate();
     const now = new Date();
     const diffTime = now.getTime() - birth.getTime();
     const days = Math.floor(diffTime / (1000 * 60 * 60 * 24));
@@ -376,7 +376,7 @@ const App: React.FC = () => {
 
   // 出生後嘅年齡拆做「幾多個月幾多日」（同 MilestoneTracker 嘅 calculateAgeAtTime 一致寫法）
   const ageBreakdown = useMemo(() => {
-    const birth = new Date(BIRTH_DATE);
+    const birth = getBirthDate();
     const now = new Date();
     const diffDays = Math.max(0, Math.floor((now.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24)));
     const months = Math.floor(diffDays / 30.4375);
