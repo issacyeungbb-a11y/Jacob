@@ -25,6 +25,14 @@ export const BIRTH_DATE = pick('VITE_BIRTH_DATE', '2025-12-19');
 export const BABY_GENDER = pick('VITE_BABY_GENDER', 'male'); // 'male' | 'female'
 export const BABY_NATIONALITY = pick('VITE_BABY_NATIONALITY', '中國籍');
 
+// BIRTH_DATE 係 "YYYY-MM-DD" 字串。用 new Date(BIRTH_DATE) 解析會被當做 UTC 午夜，
+// 對香港（UTC+8）用戶嚟講即係推遲咗 8 個鐘先「入返新一日」。
+// 用 3-參數 constructor 改為本地時區午夜解析，先啱本地日曆日。
+export const getBirthDate = (): Date => {
+  const [y, m, d] = BIRTH_DATE.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+
 // ── 品牌（標題、PWA、封面相） ─────────────────────────────────────────────
 export const APP_TITLE = pick('VITE_APP_TITLE', 'Jacob 成長日記');
 export const APP_SHORT_NAME = pick('VITE_APP_SHORT_NAME', 'Jacob日記');

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { BabyLog, LogType, MilestoneLog } from '../types';
 import { MILESTONES } from '../constants';
-import { BIRTH_DATE, BABY_NAME } from '../services/config';
+import { BABY_NAME, getBirthDate } from '../services/config';
 import { Flag, Sparkles, ChevronDown, ChevronUp, Calendar, Heart } from 'lucide-react';
 
 interface MilestoneTrackerProps {
@@ -31,7 +31,7 @@ export const MilestoneTracker: React.FC<MilestoneTrackerProps> = ({ logs }) => {
   // Helper to calculate baby age at the time of log
   const calculateAgeAtTime = (dateStr: string) => {
     try {
-      const birth = new Date(BIRTH_DATE);
+      const birth = getBirthDate();
       const logDate = new Date(dateStr);
       const diffTime = logDate.getTime() - birth.getTime();
       if (diffTime < 0) return '出生前';
