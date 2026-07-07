@@ -9,6 +9,7 @@ export enum LogType {
   TUMMY_TIME = 'TUMMY_TIME',
   VACCINE = 'VACCINE',
   MILESTONE = 'MILESTONE',
+  PUMP = 'PUMP',
   WEEKLY_AI_REPORT = 'WEEKLY_AI_REPORT'
 }
 
@@ -77,6 +78,13 @@ export interface TummyTimeLog extends BaseLog {
   durationMinutes: number;
 }
 
+// 母親泵奶記錄：泵咗幾耐（分鐘）＋泵咗幾多（ml）
+export interface PumpLog extends BaseLog {
+  type: LogType.PUMP;
+  durationMinutes: number;
+  amountMl: number;
+}
+
 export interface VaccineLog extends BaseLog {
   type: LogType.VACCINE;
   vaccineId: string;
@@ -97,7 +105,7 @@ export interface WeeklyAIReport {
   createdAt: string;
 }
 
-export type BabyLog = FeedLog | DiaperLog | SleepLog | HealthLog | OtherLog | SummaryLog | TummyTimeLog | VaccineLog | MilestoneLog;
+export type BabyLog = FeedLog | DiaperLog | SleepLog | HealthLog | OtherLog | SummaryLog | TummyTimeLog | VaccineLog | MilestoneLog | PumpLog;
 
 export interface DailySummary {
   date: string;

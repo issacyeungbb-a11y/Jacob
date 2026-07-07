@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { BabyLog, LogType, FeedType, DiaperType, FeedLog, SleepLog, DiaperLog, HealthLog, SummaryLog, MilestoneLog, OtherLog, VaccineLog } from "../types";
+import { BabyLog, LogType, FeedType, DiaperType, FeedLog, SleepLog, DiaperLog, HealthLog, SummaryLog, MilestoneLog, OtherLog, VaccineLog, PumpLog } from "../types";
 import { BIRTH_DATE, BABY_NAME, BABY_GENDER, BABY_NATIONALITY } from "./config";
 import { HK_VACCINES, MILESTONES } from "../constants";
 
@@ -51,6 +51,7 @@ export const generateWeeklyAIReport = async (
     details: l.type === LogType.FEED ? `${(l as FeedLog).amountMl ?? ''}ml ${(l as FeedLog).feedType || ''}` :
              l.type === LogType.HEALTH ? `重:${(l as HealthLog).weightKg ?? '-'}kg 高:${(l as HealthLog).heightCm ?? '-'}cm` :
              l.type === LogType.SLEEP ? `${(l as SleepLog).durationMinutes ?? 0}分` :
+             l.type === LogType.PUMP ? `泵奶 ${(l as PumpLog).amountMl ?? 0}ml/${(l as PumpLog).durationMinutes ?? 0}分` :
              l.type === LogType.OTHER ? String((l as OtherLog).details || '') :
              String((l as any).status || (l as any).title || '')
   })));
@@ -65,6 +66,7 @@ export const generateWeeklyAIReport = async (
   const milestones = recentLogs.filter(l => l.type === LogType.MILESTONE) as MilestoneLog[];
   const others = recentLogs.filter(l => l.type === LogType.OTHER) as OtherLog[];
   const vaccines = recentLogs.filter(l => l.type === LogType.VACCINE) as VaccineLog[];
+  const pumps = recentLogs.filter(l => l.type === LogType.PUMP) as PumpLog[];
 
   const totalMl = feeds.reduce((s, f) => s + (f.amountMl || 0), 0);
   const totalSleepHrs = sleeps.reduce((s, x) => s + (x.durationMinutes || 0), 0) / 60;
@@ -89,6 +91,8 @@ export const generateWeeklyAIReport = async (
     "最新身高cm": latestHealth?.heightCm ?? null,
     "最新頭圍cm": latestHealth?.headCircumferenceCm ?? null,
     "里程碑數": milestones.length,
+    "媽媽泵奶次數": pumps.length,
+    "媽媽泵奶總量ml": pumps.reduce((s, p) => s + (p.amountMl || 0), 0),
   };
 
   const notable: string[] = [];

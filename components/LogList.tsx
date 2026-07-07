@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { BabyLog, LogType, FeedLog, FeedType, DiaperLog, SleepLog, HealthLog, OtherLog, SummaryLog, TummyTimeLog, VaccineLog, MilestoneLog, DiaperType } from '../types';
-import { Milk, Baby, Moon, Activity, Trash2, Edit2, StickyNote, Sunrise, Sun, Sunset, MoonStar, Clock, AlertTriangle, Smile, Meh, Frown, ClipboardCheck, Star, Timer, Syringe, Flag, X, Check, Sparkles } from 'lucide-react';
+import { BabyLog, LogType, FeedLog, FeedType, DiaperLog, SleepLog, HealthLog, OtherLog, SummaryLog, TummyTimeLog, VaccineLog, MilestoneLog, PumpLog, DiaperType } from '../types';
+import { Milk, Baby, Moon, Activity, Trash2, Edit2, StickyNote, Sunrise, Sun, Sunset, MoonStar, Clock, AlertTriangle, Smile, Meh, Frown, ClipboardCheck, Star, Timer, Syringe, Flag, X, Check, Sparkles, Droplets } from 'lucide-react';
 import { HK_VACCINES, MILESTONES } from '../constants';
 
 interface LogListProps {
@@ -29,6 +29,7 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog, onUpdateLog
       case LogType.TUMMY_TIME: return <Timer className="w-5 h-5 text-orange-500" />;
       case LogType.VACCINE: return <Syringe className="w-5 h-5 text-teal-500" />;
       case LogType.MILESTONE: return <Sparkles className="w-5 h-5 text-purple-500" />;
+      case LogType.PUMP: return <Droplets className="w-5 h-5 text-purple-500" />;
       default: return <AlertTriangle className="w-5 h-5 text-gray-400" />;
     }
   };
@@ -112,6 +113,16 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog, onUpdateLog
                             case LogType.DIAPER: (updatedLog as DiaperLog).status = editValue as DiaperType; break;
                             case LogType.OTHER: (updatedLog as OtherLog).details = editValue; break;
                             case LogType.TUMMY_TIME: (updatedLog as TummyTimeLog).durationMinutes = parseInt(editValue) || 0; break;
+                            case LogType.PUMP: {
+                                // 格式：「奶量 / 分鐘」，例如 "120 / 15"
+                                const pParts = editValue.split('/');
+                                const pLog = updatedLog as PumpLog;
+                                pLog.amountMl = parseInt(pParts[0]) || 0;
+                                if (pParts[1] !== undefined) {
+                                    pLog.durationMinutes = parseInt(pParts[1]) || 0;
+                                }
+                                break;
+                            }
                             case LogType.MILESTONE: (updatedLog as MilestoneLog).notes = editValue; break;
                         }
                         onUpdateLog(updatedLog);
@@ -178,6 +189,9 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog, onUpdateLog
             return (log as OtherLog).details || '無內容';
         case LogType.TUMMY_TIME:
             return `${(log as TummyTimeLog).durationMinutes} 分鐘`;
+        case LogType.PUMP:
+            const p = log as PumpLog;
+            return `${p.amountMl || 0}ml / ${p.durationMinutes || 0}分鐘`;
         case LogType.VACCINE:
             const vId = (log as VaccineLog).vaccineId;
             const v = HK_VACCINES.find(x => x.id === vId);
@@ -311,6 +325,7 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog, onUpdateLog
                               case LogType.DIAPER: setEditValue((log as DiaperLog).status || ''); break;
                               case LogType.OTHER: setEditValue((log as OtherLog).details || ''); break;
                               case LogType.TUMMY_TIME: setEditValue(String((log as TummyTimeLog).durationMinutes || '')); break;
+                              case LogType.PUMP: setEditValue(`${(log as PumpLog).amountMl || 0} / ${(log as PumpLog).durationMinutes || 0}`); break;
                               case LogType.MILESTONE: setEditValue((log as MilestoneLog).notes || (log as MilestoneLog).title || ''); break;
                               default: setEditValue('');
                           }

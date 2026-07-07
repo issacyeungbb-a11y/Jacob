@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { LogType, FeedType, DiaperType, BabyLog, HealthLog, SleepQuality, TummyTimeLog, VaccineLog, MilestoneLog } from '../types';
-import { PlusCircle, CalendarDays, Moon, Play, Square, History, Weight, Ruler, Activity, Clock, Smile, Meh, Frown, Timer, Syringe, Flag, Sparkles } from 'lucide-react';
+import { LogType, FeedType, DiaperType, BabyLog, HealthLog, SleepQuality, TummyTimeLog, VaccineLog, MilestoneLog, PumpLog } from '../types';
+import { PlusCircle, CalendarDays, Moon, Play, Square, History, Weight, Ruler, Activity, Clock, Smile, Meh, Frown, Timer, Syringe, Flag, Sparkles, Droplets } from 'lucide-react';
 import { HK_VACCINES, MILESTONES } from '../constants';
 import { BABY_NAME } from '../services/config';
 
@@ -45,6 +45,8 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
   const [healthValue, setHealthValue] = useState<string>("");
   const [otherDetails, setOtherDetails] = useState<string>("");
   const [tummyDuration, setTummyDuration] = useState<number>(5);
+  const [pumpDuration, setPumpDuration] = useState<number>(15);
+  const [pumpAmount, setPumpAmount] = useState<number>(100);
   const [vaccineId, setVaccineId] = useState<string>(HK_VACCINES[0].id);
   const [milestoneId, setMilestoneId] = useState<string>(MILESTONES[0].id);
   const [momentTitle, setMomentTitle] = useState<string>("");
@@ -155,6 +157,13 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
             case LogType.TUMMY_TIME:
                 newLog = { ...baseLog, type: LogType.TUMMY_TIME, durationMinutes: tummyDuration } as TummyTimeLog;
                 break;
+            case LogType.PUMP:
+                if (!pumpAmount || pumpAmount <= 0) {
+                    alert("請輸入有效的泵奶量");
+                    return;
+                }
+                newLog = { ...baseLog, type: LogType.PUMP, durationMinutes: pumpDuration, amountMl: Number(pumpAmount) } as PumpLog;
+                break;
             case LogType.VACCINE:
                 newLog = { ...baseLog, type: LogType.VACCINE, vaccineId } as VaccineLog;
                 break;
@@ -227,6 +236,7 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
         <TabButton type={LogType.FEED} label="飲食" />
         <TabButton type={LogType.DIAPER} label="尿片" />
         <TabButton type={LogType.SLEEP} label="睡眠" />
+        <TabButton type={LogType.PUMP} label="泵奶" />
         <TabButton type={LogType.HEALTH} label="健康" />
         <TabButton type={LogType.VACCINE} label="疫苗" />
         <TabButton type={LogType.MILESTONE} label="成長點滴" />
@@ -478,6 +488,50 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
                 ))}
                 </div>
             </div>
+            )}
+
+            {activeType === LogType.PUMP && (
+            <>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                        <Timer className="w-4 h-4 text-purple-400" />
+                        泵咗幾耐 (分鐘)
+                    </label>
+                    <div className="flex gap-2 mb-2 overflow-x-auto no-scrollbar">
+                        {[10, 15, 20, 30].map((m) => (
+                            <button
+                                key={m}
+                                type="button"
+                                onClick={() => setPumpDuration(m)}
+                                className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${pumpDuration === m ? 'bg-purple-100 text-purple-700 border-2 border-purple-500' : 'bg-gray-50 border border-gray-200 text-gray-600'}`}
+                            >
+                                {m}分鐘
+                            </button>
+                        ))}
+                    </div>
+                    <input
+                        type="number"
+                        value={pumpDuration}
+                        onChange={(e) => setPumpDuration(Number(e.target.value))}
+                        className="w-full p-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-purple-500 outline-none text-center font-bold"
+                        min={1}
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                        <Droplets className="w-4 h-4 text-purple-400" />
+                        泵咗幾多 (ml)
+                    </label>
+                    <input
+                        type="number"
+                        value={pumpAmount}
+                        onChange={(e) => setPumpAmount(Number(e.target.value))}
+                        className="w-full p-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-purple-500 outline-none text-center text-xl font-bold"
+                        placeholder="100"
+                        min={1}
+                    />
+                </div>
+            </>
             )}
 
             {activeType === LogType.HEALTH && (

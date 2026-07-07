@@ -1,15 +1,15 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { BabyLog, LogType, FeedLog, FeedType, SleepLog, DiaperLog, DiaperType, OtherLog } from '../types';
-import { BarChart3, Milk, Moon, Layers, Clock, Check, X, Info, Apple } from 'lucide-react';
+import { BabyLog, LogType, FeedLog, FeedType, SleepLog, DiaperLog, DiaperType, OtherLog, PumpLog } from '../types';
+import { BarChart3, Milk, Moon, Layers, Clock, Check, X, Info, Apple, Droplets } from 'lucide-react';
 
 interface TrendsChartProps {
   logs: BabyLog[];
 }
 
-type ChartMode = 'MILK' | 'SOLIDS' | 'SLEEP' | 'DIAPER';
+type ChartMode = 'MILK' | 'SOLIDS' | 'SLEEP' | 'DIAPER' | 'PUMP';
 type TimeRange = 7 | 14 | 30 | 'ALL';
-type PatternKey = 'FEED' | 'SOLIDS' | 'WET' | 'DIRTY' | 'BATH';
+type PatternKey = 'FEED' | 'SOLIDS' | 'WET' | 'DIRTY' | 'BATH' | 'PUMP';
 
 interface PointData {
   log: BabyLog;
@@ -32,7 +32,8 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
     SOLIDS: true,
     WET: true,
     DIRTY: true,
-    BATH: true
+    BATH: true,
+    PUMP: true
   });
 
   // Popup State
@@ -156,6 +157,10 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
         value = Number((minutes / 60).toFixed(1)); // Convert to hours
       } else if (mode === 'DIAPER') {
         value = dayLogs.filter(l => l.type === LogType.DIAPER).length;
+      } else if (mode === 'PUMP') {
+        value = dayLogs
+          .filter(l => l.type === LogType.PUMP)
+          .reduce((sum, l) => sum + ((l as PumpLog).amountMl || 0), 0);
       }
 
       const displayDate = new Date(dateStr).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
@@ -224,6 +229,13 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
                      zIndex = 30;
                      typeKey = 'DIRTY';
                  }
+             } else if (log.type === LogType.PUMP) {
+                 const pLog = log as PumpLog;
+                 colorClass = 'bg-purple-500 ring-2 ring-purple-100';
+                 typeLabel = '泵奶';
+                 details = `${pLog.amountMl}ml / ${pLog.durationMinutes}分鐘`;
+                 zIndex = 18;
+                 typeKey = 'PUMP';
              } else if (log.type === LogType.OTHER) {
                  const oLog = log as OtherLog;
                  const dText = oLog.details?.toLowerCase() || '';
@@ -272,15 +284,17 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
       case 'SOLIDS': return 'text-emerald-500 bg-emerald-500';
       case 'SLEEP': return 'text-indigo-500 bg-indigo-500';
       case 'DIAPER': return 'text-amber-500 bg-amber-500';
+      case 'PUMP': return 'text-purple-500 bg-purple-500';
     }
   };
-  
+
   const getUnit = () => {
      switch (mode) {
       case 'MILK': return 'ml';
       case 'SOLIDS': return '次';
       case 'SLEEP': return 'hr';
       case 'DIAPER': return '次';
+      case 'PUMP': return 'ml';
     }
   };
 
@@ -391,6 +405,7 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
                     <TabButton m="SOLIDS" icon={Apple} label="副食品" />
                     <TabButton m="SLEEP" icon={Moon} label="睡眠" />
                     <TabButton m="DIAPER" icon={Layers} label="換片" />
+                    <TabButton m="PUMP" icon={Droplets} label="泵奶" />
                 </div>
             </div>
 
@@ -510,6 +525,7 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
                    <LegendToggle pKey="WET" color="bg-amber-300" label="小便" />
                    <LegendToggle pKey="DIRTY" color="bg-orange-500" label="大便" />
                    <LegendToggle pKey="BATH" color="bg-pink-400" label="沖涼" />
+                   <LegendToggle pKey="PUMP" color="bg-purple-500" label="泵奶" />
                 </div>
              </div>
              
