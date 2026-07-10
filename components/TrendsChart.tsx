@@ -142,10 +142,16 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
       });
 
       let value = 0;
+      let breakdown: { formula: number; bottle: number; direct: number } | undefined;
       if (mode === 'MILK') {
-        value = dayLogs
-          .filter(l => l.type === LogType.FEED && (l as FeedLog).feedType !== FeedType.SOLIDS)
-          .reduce((sum, l) => sum + ((l as FeedLog).amountMl || 0), 0);
+        const milkLogs = dayLogs.filter(l => l.type === LogType.FEED && (l as FeedLog).feedType !== FeedType.SOLIDS) as FeedLog[];
+        const sumBy = (t: FeedType) => milkLogs.filter(l => l.feedType === t).reduce((sum, l) => sum + (l.amountMl || 0), 0);
+        breakdown = {
+          formula: sumBy(FeedType.FORMULA),
+          bottle: sumBy(FeedType.BREAST),
+          direct: sumBy(FeedType.DIRECT),
+        };
+        value = breakdown.formula + breakdown.bottle + breakdown.direct;
       } else if (mode === 'SOLIDS') {
         value = dayLogs
           .filter(l => l.type === LogType.FEED && (l as FeedLog).feedType === FeedType.SOLIDS)
@@ -164,7 +170,7 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
       }
 
       const displayDate = new Date(dateStr).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
-      return { date: dateStr, displayDate, value };
+      return { date: dateStr, displayDate, value, breakdown };
     });
   }, [logs, chartDates, mode]);
 
@@ -407,6 +413,21 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
                     <TabButton m="DIAPER" icon={Layers} label="換片" />
                     <TabButton m="PUMP" icon={Droplets} label="泵奶" />
                 </div>
+
+                {/* 奶量疊色圖例：邊隻顏色代表邊種奶 */}
+                {mode === 'MILK' && (
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <span className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500">
+                            <span className="w-2.5 h-2.5 rounded-sm bg-blue-500 inline-block"></span>配方奶
+                        </span>
+                        <span className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500">
+                            <span className="w-2.5 h-2.5 rounded-sm bg-sky-300 inline-block"></span>母乳
+                        </span>
+                        <span className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500">
+                            <span className="w-2.5 h-2.5 rounded-sm bg-pink-400 inline-block"></span>親餵
+                        </span>
+                    </div>
+                )}
             </div>
 
             <div className="flex relative h-[240px] border border-gray-50 rounded-xl overflow-hidden bg-slate-50/30">
@@ -466,18 +487,36 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
                                     <div className="bg-gray-900/95 backdrop-blur-sm text-white text-[10.5px] font-bold px-2.5 py-1 rounded-xl shadow-lg whitespace-nowrap flex flex-col items-center border border-gray-800">
                                         <span className="text-[8px] text-gray-400 font-medium leading-none pb-0.5">{d.displayDate}</span>
                                         <span className="leading-tight">{d.value} {getUnit()}</span>
+                                        {mode === 'MILK' && d.breakdown && d.value > 0 && (
+                                            <div className="flex flex-col items-start gap-0 pt-0.5 border-t border-gray-700 mt-0.5 w-full">
+                                                {d.breakdown.formula > 0 && <span className="text-[9px] text-blue-300 leading-tight">配方奶 {d.breakdown.formula}ml</span>}
+                                                {d.breakdown.bottle > 0 && <span className="text-[9px] text-sky-300 leading-tight">母乳 {d.breakdown.bottle}ml</span>}
+                                                {d.breakdown.direct > 0 && <span className="text-[9px] text-pink-300 leading-tight">親餵 {d.breakdown.direct}ml</span>}
+                                            </div>
+                                        )}
                                     </div>
                                     {/* Triangle */}
                                     <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gradient-to-br from-gray-900/95 to-gray-950 rotate-45 border-r border-b border-gray-800"></div>
                                 </div>
                             </div>
                             
-                            <div 
-                                className={`rounded-t-sm transition-all duration-500 ease-out ${getBarWidthClass()} ${
-                                d.value === maxValue ? getColor().split(' ')[1] : 'bg-gray-300 group-hover:bg-gray-400'
-                                }`}
-                                style={{ height: `${Math.max(getBarHeight(d.value), 2)}px` }}
-                            ></div>
+                            {mode === 'MILK' && d.breakdown && d.value > 0 ? (
+                                <div
+                                    className={`rounded-t-sm overflow-hidden transition-all duration-500 ease-out flex flex-col ${getBarWidthClass()}`}
+                                    style={{ height: `${Math.max(getBarHeight(d.value), 2)}px` }}
+                                >
+                                    <div className="bg-pink-400 w-full" style={{ height: `${(d.breakdown.direct / d.value) * 100}%` }}></div>
+                                    <div className="bg-sky-300 w-full" style={{ height: `${(d.breakdown.bottle / d.value) * 100}%` }}></div>
+                                    <div className="bg-blue-500 w-full" style={{ height: `${(d.breakdown.formula / d.value) * 100}%` }}></div>
+                                </div>
+                            ) : (
+                                <div
+                                    className={`rounded-t-sm transition-all duration-500 ease-out ${getBarWidthClass()} ${
+                                    d.value === maxValue ? getColor().split(' ')[1] : 'bg-gray-300 group-hover:bg-gray-400'
+                                    }`}
+                                    style={{ height: `${Math.max(getBarHeight(d.value), 2)}px` }}
+                                ></div>
+                            )}
                             
                             <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 w-full flex justify-center">
                                 {shouldShowLabel(i) && (

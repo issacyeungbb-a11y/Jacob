@@ -776,7 +776,7 @@ const App: React.FC = () => {
         <div className="flex items-center justify-between w-full min-w-[420px]">
           <NavButton view="HOME" icon={LayoutDashboard} label="儀表板" />
           <NavButton view="HISTORY" icon={History} label="紀錄" />
-          <NavButton view="ROUTINE" icon={BarChart2} label="作息紀錄" />
+          <NavButton view="ROUTINE" icon={BarChart2} label="統計" />
           <div className="flex flex-col items-center -mt-8 px-2">
              <button 
                onClick={() => setActiveView('HOME')}

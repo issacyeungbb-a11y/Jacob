@@ -15,6 +15,7 @@ export enum LogType {
 
 export enum FeedType {
   BREAST = '母乳',
+  DIRECT = '親餵',   // 埋身餵哺（直接哺乳），奶量為估計值
   FORMULA = '配方奶',
   SOLIDS = '副食品'
 }

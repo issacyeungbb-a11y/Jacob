@@ -78,6 +78,7 @@ export const generateWeeklyAIReport = async (
     "餵奶次數": feeds.length,
     "餵奶總量ml": totalMl,
     "母乳次數": feeds.filter(f => f.feedType === FeedType.BREAST).length,
+    "親餵次數": feeds.filter(f => f.feedType === FeedType.DIRECT).length,
     "配方奶次數": feeds.filter(f => f.feedType === FeedType.FORMULA).length,
     "副食品次數": feeds.filter(f => f.feedType === FeedType.SOLIDS).length,
     "睡眠段數": sleeps.length,
