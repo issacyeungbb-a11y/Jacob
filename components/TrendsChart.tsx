@@ -430,9 +430,9 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
                 )}
             </div>
 
-            <div className="flex relative h-[240px] border border-gray-50 rounded-xl overflow-hidden bg-slate-50/30">
+            <div className="flex relative h-[280px] border border-gray-50 rounded-xl bg-slate-50/30">
                 {/* Y-Axis Labels (Fixed Left) */}
-                <div className="w-10 flex-shrink-0 flex flex-col justify-between text-[9px] text-gray-400 font-medium bg-white border-r border-gray-100 z-20 items-center select-none shadow-sm self-end" style={{ height: '184px', paddingBottom: '24px' }}>
+                <div className="w-10 flex-shrink-0 flex flex-col justify-between text-[9px] text-gray-400 font-medium bg-white border-r border-gray-100 z-20 items-center select-none shadow-sm self-end rounded-bl-xl" style={{ height: '184px', paddingBottom: '24px' }}>
                     <span>{maxValue}</span>
                     <span>{Math.round(maxValue * 0.75)}</span>
                     <span>{Math.round(maxValue / 2)}</span>
@@ -441,7 +441,7 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ logs }) => {
                 </div>
 
                 {/* Scrollable Bar Area */}
-                <div className="flex-1 overflow-x-auto no-scrollbar relative touch-pan-x">
+                <div className="flex-1 overflow-x-auto overflow-y-visible no-scrollbar relative touch-pan-x">
                     <div className="h-full flex items-end min-w-full px-2 pb-6" style={{ width: `${Math.max(100, chartData.length * (daysRange === 30 ? 4 : (daysRange === 'ALL' ? 2 : 14)))}%` }}>
                         {/* Horizontal Grid Lines */}
                         <div className="absolute inset-x-0 bottom-[24px] h-[160px] flex flex-col justify-between pointer-events-none z-0">
