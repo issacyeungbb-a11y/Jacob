@@ -92,6 +92,14 @@ export const HealthChart: React.FC<HealthChartProps> = ({ logs }) => {
         return (index / (data.length - 1)) * 100;
     };
 
+    // 記錄多咗嗰陣，日期標籤逐個顯示會逼埋一齊，所以隔幾個先顯示一個（頭尾必顯示）
+    const shouldShowDateLabel = (index: number) => {
+        const total = data.length;
+        if (total <= 6) return true;
+        const step = Math.max(1, Math.ceil(total / 6));
+        return index % step === 0 || index === total - 1;
+    };
+
     const pathD = data.map((d, i) => {
         const x = getX(i);
         const y = getY(d.value);
@@ -162,9 +170,11 @@ export const HealthChart: React.FC<HealthChartProps> = ({ logs }) => {
                                 <path d={`M ${xPct}% ${y-12} L ${xPct-4}% ${y-16} L ${xPct+4}% ${y-16} Z`} fill="#065f46" />
                             </g>
 
-                            <text x={`${xPct}%`} y={215} textAnchor="middle" fill="#9ca3af" fontSize="10" className="group-hover/point:fill-emerald-600 group-hover/point:font-bold">
-                                {d.date.toLocaleDateString('zh-TW', {month:'numeric', day:'numeric'})}
-                            </text>
+                            {shouldShowDateLabel(i) && (
+                                <text x={`${xPct}%`} y={215} textAnchor="middle" fill="#9ca3af" fontSize="10" className="group-hover/point:fill-emerald-600 group-hover/point:font-bold">
+                                    {d.date.toLocaleDateString('zh-TW', {month:'numeric', day:'numeric'})}
+                                </text>
+                            )}
                         </g>
                     );
                 })}
