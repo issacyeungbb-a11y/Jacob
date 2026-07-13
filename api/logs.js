@@ -1,80 +1,72 @@
 // Vercel Serverless Function：讀取 Firestore 記錄，供外部 AI／工具讀取。
-// 讀環境變數（同 services/config.ts 相同 fallback，預設 = Jacob），
-// 令 Jacob／Charlie 各自嘅 Vercel 部署自動讀返自己嘅資料，唔使硬編碼。
+// 共用邏輯喺 ./_shared.js（env 驅動，Jacob/Charlie 各自部署自動讀自己資料）。
+//
+// Query 參數（全部可選，唔帶參數 = 舊有完整輸出，向後兼容）：
+//   ?days=7      只攞最近 N 日嘅記錄
+//   ?type=FEED   只攞某類記錄（FEED/SLEEP/DIAPER/HEALTH/PUMP/MILESTONE/VACCINE/OTHER/SUMMARY）
+//   ?summary=1   只回計好嘅統計摘要（最慳 token，啱 AI 日常查詢）
+//   ?key=xxx     token（只喺 Vercel 設咗 API_SECRET 環境變數先需要）
 
-const pick = (key, fallback) => {
-  const v = process.env[key];
-  return v && v !== 'undefined' ? String(v) : fallback;
-};
-
-const BABY_NAME = pick('VITE_BABY_NAME', 'Jacob');
-const BIRTH_DATE = pick('VITE_BIRTH_DATE', '2025-12-19');
-const DATA_PREFIX = pick('VITE_DATA_PREFIX', 'jacob');
-const PROJECT_ID = pick('VITE_FIREBASE_PROJECT_ID', 'jacob-3ac2a');
-const API_KEY = pick('VITE_FIREBASE_API_KEY', 'AIzaSyA3YcF5I34enfLakA8KayYWt7_t1UojI14');
-
-const COLLECTION_NAME = `${DATA_PREFIX}_logs`;
-const WEEKLY_REPORTS_COLLECTION = `${DATA_PREFIX}_weekly_reports`;
-
-const BASE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
-
-function parseValue(v) {
-  if (!v) return null;
-  if ('stringValue' in v) return v.stringValue;
-  if ('integerValue' in v) return Number(v.integerValue);
-  if ('doubleValue' in v) return Number(v.doubleValue);
-  if ('booleanValue' in v) return v.booleanValue;
-  if ('nullValue' in v) return null;
-  if ('mapValue' in v) return parseFields(v.mapValue.fields || {});
-  if ('arrayValue' in v) return (v.arrayValue.values || []).map(parseValue);
-  return null;
-}
-
-function parseFields(fields) {
-  const obj = {};
-  for (const [k, v] of Object.entries(fields)) {
-    obj[k] = parseValue(v);
-  }
-  return obj;
-}
-
-async function fetchAllDocs(collection) {
-  const docs = [];
-  let pageToken = null;
-  do {
-    const url = `${BASE_URL}/${collection}?key=${API_KEY}&pageSize=300${pageToken ? `&pageToken=${pageToken}` : ''}`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Firestore error: ${res.status}`);
-    const data = await res.json();
-    for (const doc of (data.documents || [])) {
-      docs.push(parseFields(doc.fields || {}));
-    }
-    pageToken = data.nextPageToken || null;
-  } while (pageToken);
-  return docs;
-}
+import {
+  BABY_NAME,
+  BIRTH_DATE,
+  fetchLogs,
+  fetchReports,
+  checkAuth,
+  filterLogs,
+  computeStats,
+} from './_shared.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key');
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
+  if (!checkAuth(req)) return res.status(401).json({ error: 'unauthorized：需要有效嘅 key（?key= / x-api-key header）' });
+
+  let params;
+  try {
+    params = new URL(req.url, 'http://localhost').searchParams;
+  } catch (e) {
+    params = new URLSearchParams();
+  }
+  const days = Number(params.get('days')) || 0;
+  const type = params.get('type') || '';
+  const summaryOnly = params.get('summary') === '1' || params.get('summary') === 'true';
 
   try {
-    const [rawLogs, rawReports] = await Promise.all([
-      fetchAllDocs(COLLECTION_NAME),
-      fetchAllDocs(WEEKLY_REPORTS_COLLECTION),
-    ]);
+    const logs = await fetchLogs();
 
-    const logs = rawLogs
-      .filter(l => l.timestamp && l.type)
-      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    // ?summary=1：只回統計摘要，唔回原始記錄（最細 payload）
+    if (summaryOnly) {
+      const scoped = filterLogs(logs, { days: days || 7, type });
+      return res.status(200).json({
+        baby: BABY_NAME,
+        birthDate: BIRTH_DATE,
+        fetchedAt: new Date().toISOString(),
+        query: { days: days || 7, type: type || null, summary: true },
+        stats: computeStats(scoped, days || 7),
+      });
+    }
 
-    const reports = rawReports
-      .sort((a, b) => (b.weekNum || 0) - (a.weekNum || 0));
+    // ?days= / ?type=：過濾後嘅記錄（唔連週報，保持 payload 細）
+    if (days || type) {
+      const scoped = filterLogs(logs, { days, type });
+      return res.status(200).json({
+        baby: BABY_NAME,
+        birthDate: BIRTH_DATE,
+        fetchedAt: new Date().toISOString(),
+        query: { days: days || null, type: type || null },
+        totalLogs: scoped.length,
+        logs: scoped,
+      });
+    }
 
-    res.status(200).json({
+    // 無參數：舊有完整輸出（100% 向後兼容）
+    const reports = await fetchReports();
+    return res.status(200).json({
       baby: BABY_NAME,
       birthDate: BIRTH_DATE,
       fetchedAt: new Date().toISOString(),
@@ -84,6 +76,6 @@ export default async function handler(req, res) {
       weeklyReports: reports,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 }
