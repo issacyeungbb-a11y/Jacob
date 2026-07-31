@@ -115,11 +115,8 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, (process as any).cwd(), '');
   return {
     plugins: [react(), brandingPlugin(env)],
-    define: {
-      // This allows process.env.GEMINI_API_KEY and API_KEY to work in the browser
-      'process.env.GEMINI_API_KEY': JSON.stringify(process.env.GEMINI_API_KEY || env.GEMINI_API_KEY),
-      'process.env.API_KEY': JSON.stringify(process.env.API_KEY || env.API_KEY),
-    },
+    // 注意：Gemini API key 唔再注入前端。週報改由 server 端 /api/weekly-report 代叫，
+    // key 只留喺 Vercel 環境變數（GEMINI_API_KEY），唔會出現喺瀏覽器 bundle。
     build: {
       outDir: 'dist',
       rollupOptions: {
@@ -127,7 +124,6 @@ export default defineConfig(({ mode }) => {
           manualChunks: {
             vendor: ['react', 'react-dom', 'firebase/app', 'firebase/firestore'],
             ui: ['lucide-react'],
-            genai: ['@google/genai']
           }
         }
       }
