@@ -1,4 +1,3 @@
-import { GoogleGenAI } from "@google/genai";
 import { BabyLog, LogType, FeedType, DiaperType, FeedLog, SleepLog, DiaperLog, HealthLog, SummaryLog, MilestoneLog, OtherLog, VaccineLog, PumpLog } from "../types";
 import { BIRTH_DATE, BABY_NAME, BABY_GENDER, BABY_NATIONALITY } from "./config";
 import { HK_VACCINES, MILESTONES } from "../constants";
@@ -9,33 +8,10 @@ export const generateWeeklyAIReport = async (
   months: number, 
   dateStr: string
 ): Promise<string> => {
-  let apiKey = "";
-  try {
-    if (typeof (import.meta as any).env !== 'undefined') {
-      apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY || (import.meta as any).env.VITE_API_KEY || "";
-    }
-  } catch (e) {}
-
-  if (!apiKey) {
-    try {
-      if (typeof process !== 'undefined' && process.env) {
-        apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY || "";
-      }
-    } catch (e) {}
-  }
-  
-  if (!apiKey || apiKey === "undefined" || apiKey === "") {
-    throw new Error("系統設定錯誤：找不到 API Key，請確保已在 Secrets 或 Vercel 中設定 GEMINI_API_KEY 或 API_KEY。");
-  }
-
-  let ai;
-  try {
-    ai = new GoogleGenAI({ apiKey });
-  } catch (e) {
-    console.error("Failed to initialize GoogleGenAI:", e);
-    throw new Error("系統設定錯誤：API Key 初始化失敗。");
-  }
-
+  // 週報改由 server 端（/api/weekly-report）代呼叫 Gemini：
+  // Gemini API 會按來源 IP 做地區封鎖（香港未支援），喺瀏覽器直接叫會撞到
+  // 「User location is not supported」。經 Vercel 美國機房代叫即可避開，
+  // 同時亦唔使將 API key 曝露喺前端 bundle。
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   const fourteenDaysAgo = new Date();
@@ -238,42 +214,40 @@ ${logSummary}
 （疫苗／健檢提醒＋本週特別需要注意嘅事項）
   `;
 
-  try {
-    // 主用 Gemini 3 Flash（性價比最佳、免費層 cover）；若型號 id 唔存在則退到最新穩定 Flash
-    const models = ['gemini-3-flash', 'gemini-flash-latest'];
-    let response: any;
-    let lastErr: any;
-    for (const model of models) {
-      try {
-        response = await ai.models.generateContent({
-          model,
-          contents: prompt,
-          config: { temperature: 0.9 },
-        });
-        break;
-      } catch (e: any) {
-        lastErr = e;
-        const msg = String(e?.message || '');
-        // 只喺「型號唔存在／唔支援」先試下一個；其他錯誤即刻拋出
-        if (/not found|not support|does not exist|unknown model|NOT_FOUND|404/i.test(msg)) continue;
-        throw e;
-      }
-    }
-    if (!response) throw lastErr || new Error("生成失敗");
+  // 主用 Gemini 3 Flash（性價比最佳、免費層 cover）；若型號 id 唔存在，server 會退到最新穩定 Flash
+  const models = ['gemini-3-flash', 'gemini-flash-latest'];
 
-    if (!response.text) {
-        throw new Error("AI 返回了空白內容。");
-    }
-    return response.text;
-  } catch (error: any) {
-    console.error("Error generating weekly report:", error);
-    const errorMsg = error?.message || "";
+  let res: Response;
+  try {
+    res = await fetch('/api/weekly-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, models, temperature: 0.9 }),
+    });
+  } catch (netErr: any) {
+    console.error("Error calling weekly-report API:", netErr);
+    throw new Error(`抱歉，目前無法產生週報。原因：${netErr?.message || "網路連線問題"}`);
+  }
+
+  const data = await res.json().catch(() => ({} as any));
+
+  if (!res.ok) {
+    const errorMsg = String((data && data.error) || `伺服器錯誤（${res.status}）`);
+    console.error("Weekly report API error:", errorMsg);
     if (errorMsg.includes("API_KEY_INVALID")) {
       throw new Error("錯誤：API Key 無效，請檢查設定是否正確。");
+    }
+    if (errorMsg.includes("location is not supported") || errorMsg.includes("FAILED_PRECONDITION")) {
+      throw new Error("抱歉，AI 服務所在地區暫時受限。若持續出現，請通知開發者檢查伺服器區域設定。");
     }
     if (errorMsg.includes("503") || errorMsg.includes("UNAVAILABLE")) {
       throw new Error("抱歉，AI 伺服器目前太過繁忙（503 錯誤）。這通常是暫時性的，請稍後再試。");
     }
-    throw new Error(`抱歉，目前無法產生週報。原因：${errorMsg || "網路連線或 API 設定問題"}`);
+    throw new Error(`抱歉，目前無法產生週報。原因：${errorMsg}`);
   }
+
+  if (!data || !data.report) {
+    throw new Error("AI 返回了空白內容。");
+  }
+  return data.report;
 };
