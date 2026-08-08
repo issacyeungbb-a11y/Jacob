@@ -25,6 +25,7 @@ import { TrendsChart } from './components/TrendsChart';
 import { HealthChart } from './components/HealthChart';
 import { VaccineTracker } from './components/VaccineTracker';
 import { MilestoneTracker } from './components/MilestoneTracker';
+import { Timeline } from './components/Timeline';
 import { WeeklyReport } from './components/WeeklyReport';
 import { 
   Download, 
@@ -37,6 +38,7 @@ import {
   ChevronRight, 
   LayoutDashboard,
   History,
+  Clock,
   BarChart2,
   Plus,
   Loader2,
@@ -61,7 +63,7 @@ import { BABY_NAME, PROFILE_IMAGE, getBirthDate } from './services/config';
 import { WeeklyAIReport } from './types';
 import ReactMarkdown from 'react-markdown';
 
-type AppView = 'HOME' | 'HISTORY' | 'ROUTINE' | 'MILESTONES' | 'WEEKLY' | 'HEALTH';
+type AppView = 'HOME' | 'HISTORY' | 'TIMELINE' | 'ROUTINE' | 'MILESTONES' | 'WEEKLY' | 'HEALTH';
 
 const App: React.FC = () => {
   if (!isConfigured) {
@@ -745,6 +747,14 @@ const App: React.FC = () => {
           </div>
         )}
 
+        {activeView === 'TIMELINE' && (
+          <Timeline
+            logs={logs}
+            onDeleteLog={deleteLogFromCloud}
+            onUpdateLog={handleUpdateLog}
+          />
+        )}
+
         {activeView === 'ROUTINE' && (
           <div className="space-y-6">
             <TrendsChart logs={logs} />
@@ -777,9 +787,10 @@ const App: React.FC = () => {
 
       {/* Nav Bar */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t border-gray-100 px-2 py-2 flex justify-between items-center z-50 overflow-x-auto no-scrollbar">
-        <div className="flex items-center justify-between w-full min-w-[420px]">
+        <div className="flex items-center justify-between w-full min-w-[480px]">
           <NavButton view="HOME" icon={LayoutDashboard} label="儀表板" />
           <NavButton view="HISTORY" icon={History} label="紀錄" />
+          <NavButton view="TIMELINE" icon={Clock} label="時間軸" />
           <NavButton view="ROUTINE" icon={BarChart2} label="統計" />
           <div className="flex flex-col items-center -mt-8 px-2">
              <button 
