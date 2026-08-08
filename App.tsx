@@ -760,7 +760,11 @@ const App: React.FC = () => {
 
         {activeView === 'MILESTONES' && (
           <div className="space-y-6">
-            <MilestoneTracker logs={logs} />
+            <MilestoneTracker
+              logs={logs}
+              onDeleteLog={deleteLogFromCloud}
+              onUpdateLog={handleUpdateLog}
+            />
           </div>
         )}
 
