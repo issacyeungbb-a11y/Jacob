@@ -91,11 +91,18 @@ export interface VaccineLog extends BaseLog {
   vaccineId: string;
 }
 
+// 成長點滴嘅分類。頭五個刻意同 constants.ts 嘅 MILESTONES（CDC 發展指標）
+// 用同一套名，令記低嘅事可以直接對返「里程碑對照指引」。
+export type MomentCategory =
+  | '大肌肉' | '細肌肉' | '語言/溝通' | '社交/情緒' | '認知'
+  | '生活體驗' | '健康護理' | '其他';
+
 export interface MilestoneLog extends BaseLog {
   type: LogType.MILESTONE;
   milestoneId?: string;
   title?: string;
   emoji?: string;
+  category?: MomentCategory;
 }
 
 export interface WeeklyAIReport {

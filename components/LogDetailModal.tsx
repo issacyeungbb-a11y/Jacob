@@ -4,6 +4,7 @@ import {
   FeedLog, SleepLog, DiaperLog, HealthLog, MilestoneLog, OtherLog, PumpLog, TummyTimeLog,
 } from '../types';
 import { BABY_NAME } from '../services/config';
+import { MOMENT_CATEGORIES, CATEGORY_MAP, inferCategory } from '../services/momentCategories';
 import { ageAt, describeLog, hhmm, durationCn } from '../services/lifeEvents';
 import { X, Pencil, Trash2, Check, CalendarDays, Moon, ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -91,6 +92,7 @@ export const LogDetailModal: React.FC<Props> = ({
         const m = log as MilestoneLog;
         d.title = m.title || '';
         d.emoji = m.emoji || '✨';
+        d.category = inferCategory(m);   // 舊記錄冇分類，先填返推斷值
         break;
       }
       case LogType.OTHER: d.details = (log as OtherLog).details || ''; break;
@@ -132,6 +134,7 @@ export const LogDetailModal: React.FC<Props> = ({
         if (!draft.title?.trim()) return;
         updated.title = draft.title.trim();
         updated.emoji = draft.emoji;
+        updated.category = draft.category;
         break;
       case LogType.OTHER: updated.details = draft.details?.trim() || ''; break;
     }
@@ -214,12 +217,38 @@ export const LogDetailModal: React.FC<Props> = ({
                 ))}
               </div>
               {textField('title', '標題')}
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 mb-1.5">分類</label>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {MOMENT_CATEGORIES.filter(c => c.key !== '其他' || draft.category === '其他').map(c => (
+                    <button
+                      key={c.key}
+                      onClick={() => setDraft({ ...draft, category: c.key })}
+                      title={c.hint}
+                      className={`py-1.5 px-1 rounded-xl flex flex-col items-center gap-0.5 border-2 transition-all ${
+                        draft.category === c.key ? `${c.ring} font-black` : 'border-transparent bg-gray-50 text-gray-400'
+                      }`}
+                    >
+                      <span className="text-base leading-none">{c.icon}</span>
+                      <span className="text-[9px] tracking-tight">{c.short}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           ) : (
             <h3 className="text-lg font-black text-gray-800 mt-1.5 leading-snug pr-10">{describeLog(log)}</h3>
           )}
 
           <div className="flex items-center gap-2 flex-wrap mt-2 text-[10px] text-gray-400">
+            {log.type === LogType.MILESTONE && (() => {
+              const c = CATEGORY_MAP[inferCategory(log as MilestoneLog)];
+              return (
+                <span className={`font-extrabold px-2 py-0.5 rounded border ${c.chip}`}>
+                  {c.icon} {c.short}
+                </span>
+              );
+            })()}
             <span className="font-black text-purple-600 bg-purple-50 px-2 py-0.5 rounded">
               當時 {BABY_NAME} {ageAt(log.timestamp).label}
             </span>

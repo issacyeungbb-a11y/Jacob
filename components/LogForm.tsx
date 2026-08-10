@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { LogType, FeedType, DiaperType, BabyLog, HealthLog, SleepQuality, TummyTimeLog, VaccineLog, MilestoneLog, PumpLog } from '../types';
+import { LogType, FeedType, DiaperType, BabyLog, HealthLog, SleepQuality, TummyTimeLog, VaccineLog, MilestoneLog, PumpLog, MomentCategory } from '../types';
 import { PlusCircle, CalendarDays, Moon, Play, Square, History, Weight, Ruler, Activity, Clock, Smile, Meh, Frown, Timer, Syringe, Flag, Sparkles, Droplets } from 'lucide-react';
 import { HK_VACCINES, MILESTONES } from '../constants';
+import { MOMENT_CATEGORIES } from '../services/momentCategories';
 import { BABY_NAME } from '../services/config';
 
 interface LogFormProps {
@@ -52,6 +53,7 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
   const [momentTitle, setMomentTitle] = useState<string>("");
   const [momentEmoji, setMomentEmoji] = useState<string>("😊");
   const [momentNotes, setMomentNotes] = useState<string>("");
+  const [momentCategory, setMomentCategory] = useState<MomentCategory>('社交/情緒');
   const [date, setDate] = useState<string>(toLocalISO(new Date()));
 
   const timeSinceLastFeed = useMemo(() => {
@@ -173,6 +175,7 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
                     type: LogType.MILESTONE, 
                     title: momentTitle.trim() || '特別時刻', 
                     emoji: momentEmoji,
+                    category: momentCategory,
                     notes: momentNotes.trim()
                 } as any;
                 break;
@@ -189,6 +192,7 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
     setMomentTitle("");
     setMomentEmoji("😊");
     setMomentNotes("");
+    setMomentCategory('社交/情緒');
     setSolidFoodName("");
     setSolidFoodAmount("");
     const now = new Date();
@@ -626,6 +630,31 @@ export const LogForm: React.FC<LogFormProps> = ({ onAddLog, isSleeping, sleepSta
                         placeholder="例如：第一次大笑、今日成功翻身、去公園玩"
                         required
                     />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                        呢件事屬於邊方面？
+                        <span className="font-medium text-gray-400 text-xs ml-1">（決定佢喺成長軌跡嘅顏色）</span>
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {MOMENT_CATEGORIES.filter(c => c.key !== '其他').map(c => (
+                            <button
+                                key={c.key}
+                                type="button"
+                                onClick={() => setMomentCategory(c.key)}
+                                title={c.hint}
+                                className={`py-2 px-1 rounded-xl flex flex-col items-center gap-0.5 border-2 transition-all text-center select-none ${
+                                    momentCategory === c.key
+                                        ? `${c.ring} font-black scale-105 shadow-sm`
+                                        : 'border-transparent bg-gray-50 text-gray-400 hover:bg-gray-100'
+                                }`}
+                            >
+                                <span className="text-lg leading-none">{c.icon}</span>
+                                <span className="text-[10px] tracking-tight">{c.short}</span>
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 <div>
