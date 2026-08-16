@@ -1,6 +1,7 @@
 import { BabyLog, LogType, FeedType, DiaperType, FeedLog, SleepLog, DiaperLog, HealthLog, SummaryLog, MilestoneLog, OtherLog, VaccineLog, PumpLog } from "../types";
 import { BIRTH_DATE, BABY_NAME, BABY_GENDER, BABY_NATIONALITY } from "./config";
 import { HK_VACCINES, MILESTONES } from "../constants";
+import { vaccineName } from "./lifeEvents";
 
 export const generateWeeklyAIReport = async (
   logs: BabyLog[], 
@@ -123,7 +124,7 @@ export const generateWeeklyAIReport = async (
     notable.push(`🥣 副食品：${f.solidFoodName}${f.solidFoodAmount ? ` ${f.solidFoodAmount}` : ''}（${fmtDate(f.timestamp)}）`);
   });
   vaccines.forEach(v => {
-    const vn = HK_VACCINES.find(x => x.id === v.vaccineId)?.name || v.vaccineId;
+    const vn = vaccineName(v.vaccineId);
     notable.push(`💉 接種疫苗：${vn}（${fmtDate(v.timestamp)}）`);
   });
   others.forEach(o => {
