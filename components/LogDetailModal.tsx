@@ -28,6 +28,22 @@ const MOOD_OPTIONS = [
   { emoji: '❤️', label: '得意' },
 ];
 
+const URL_PATTERN = /(https?:\/\/[^\s]+)/g;
+
+const linkifyText = (text: string) => text.split(URL_PATTERN).map((part, index) => (
+  /^https?:\/\//.test(part) ? (
+    <a
+      key={`${part}-${index}`}
+      href={part}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-blue-600 underline underline-offset-2 break-all hover:text-blue-700"
+    >
+      {part}
+    </a>
+  ) : part
+));
+
 interface Props {
   log: BabyLog;
   onClose: () => void;
@@ -333,7 +349,7 @@ export const LogDetailModal: React.FC<Props> = ({
               </div>
             </>
           ) : log.notes ? (
-            <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{log.notes}</p>
+            <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{linkifyText(log.notes)}</p>
           ) : (
             <p className="text-gray-300 text-sm italic text-center py-4">冇額外備註</p>
           )}
