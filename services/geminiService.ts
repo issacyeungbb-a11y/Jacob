@@ -214,8 +214,9 @@ ${logSummary}
 （疫苗／健檢提醒＋本週特別需要注意嘅事項）
   `;
 
-  // 主用 Gemini 3 Flash（性價比最佳、免費層 cover）；若型號 id 唔存在，server 會退到最新穩定 Flash
-  const models = ['gemini-3-flash', 'gemini-flash-latest'];
+  // 主用 Gemini 3.7 Flash（2026-08-13 推出嘅最新 Flash）；若型號 id 唔存在，
+  // server 會順序退去 3.6，最後退到 gemini-flash-latest 別名，確保週報唔會生成唔到。
+  const models = ['gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-flash-latest'];
 
   let res: Response;
   try {

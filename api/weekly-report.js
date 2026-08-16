@@ -12,7 +12,7 @@
 
 import { GoogleGenAI } from '@google/genai';
 
-const DEFAULT_MODELS = ['gemini-3-flash', 'gemini-flash-latest'];
+const DEFAULT_MODELS = ['gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-flash-latest'];
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
