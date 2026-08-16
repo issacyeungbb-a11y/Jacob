@@ -5,7 +5,7 @@ import {
   BabyLog, LogType, FeedType, DiaperType,
   FeedLog, SleepLog, HealthLog, MilestoneLog, OtherLog, VaccineLog, PumpLog, TummyTimeLog, DiaperLog,
 } from '../types';
-import { HK_VACCINES, MILESTONES } from '../constants';
+import { HK_VACCINES, LEGACY_VACCINE_NAMES, MILESTONES } from '../constants';
 import { getBirthDate } from './config';
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
@@ -63,6 +63,10 @@ export const ageAt = (ts: string) => {
   return { months, label: months === 0 ? `${rem}天` : `${months}個月${rem > 0 ? ` ${rem}天` : ''}` };
 };
 
+/** 疫苗名。清單改過之後，舊記錄靠 LEGACY_VACCINE_NAMES 仍然顯示到名 */
+export const vaccineName = (id: string) =>
+  HK_VACCINES.find(x => x.id === id)?.name || LEGACY_VACCINE_NAMES[id] || id;
+
 /** 一句講清楚呢條記錄係咩 */
 export const describeLog = (log: BabyLog): string => {
   switch (log.type) {
@@ -96,7 +100,7 @@ export const describeLog = (log: BabyLog): string => {
     }
     case LogType.VACCINE: {
       const v = log as VaccineLog;
-      return `💉 ${HK_VACCINES.find(x => x.id === v.vaccineId)?.name || v.vaccineId}`;
+      return `💉 ${vaccineName(v.vaccineId)}`;
     }
     case LogType.TUMMY_TIME: return `趴趴 ${durationCn((log as TummyTimeLog).durationMinutes || 0)}`;
     case LogType.OTHER: return (log as OtherLog).details || '其他記錄';
@@ -138,7 +142,7 @@ export const deriveLifeEvents = (logs: BabyLog[]): LifeEvent[] => {
   sorted.filter((l): l is VaccineLog => l.type === LogType.VACCINE).forEach(v => {
     items.push({
       key: `v-${v.id}`, ts: v.timestamp, icon: '💉',
-      title: `接種 ${HK_VACCINES.find(x => x.id === v.vaccineId)?.name || v.vaccineId}`,
+      title: `接種 ${vaccineName(v.vaccineId)}`,
       desc: v.notes, tone: 'vaccine', log: v,
     });
   });

@@ -754,7 +754,11 @@ const App: React.FC = () => {
         {activeView === 'HEALTH' && (
           <div className="space-y-6">
             <HealthChart logs={logs} />
-            <VaccineTracker logs={logs} />
+            <VaccineTracker
+              logs={logs}
+              onAddLog={handleSaveLog}
+              onDeleteLog={deleteLogFromCloud}
+            />
           </div>
         )}
 

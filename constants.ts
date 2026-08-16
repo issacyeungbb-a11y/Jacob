@@ -35,21 +35,36 @@ export const WHO_MEDIAN = BABY_GENDER === 'female' ? WHO_GIRLS_MEDIAN : WHO_BOYS
 
 // HK Department of Health - Childhood Immunisation Programme
 // Source: Family Health Service, Department of Health, HKSAR
+// 「香港兒童免疫接種計劃」母嬰健康院提供嘅部分（初生至 18 個月）。
+// 資料來源：衞生署家庭健康服務／衞生防護中心「疫苗可預防疾病科學委員會」
+// 建議時間表（2024-10-09 更新）；肺炎球菌疫苗自 2024-08-05 起由十三價改為十五價。
+//
+// 兩個容易記錯嘅位：
+//  · 肺炎球菌疫苗係 2、4 個月打針，12 個月打加強劑 —— 六個月嗰針係冇嘅。
+//  · 18 個月除咗白喉混合疫苗加強劑，2018-07-01 或之後出世嘅小朋友
+//    仲會喺母嬰健康院打麻疹、腮腺炎、德國麻疹及水痘混合疫苗（舊 cohort 先留到小一打）。
 export const HK_VACCINES = [
   { id: 'v_0_1', month: 0, name: '卡介苗 (BCG)' },
   { id: 'v_0_2', month: 0, name: '乙型肝炎疫苗 - 第一次' },
   { id: 'v_1_1', month: 1, name: '乙型肝炎疫苗 - 第二次' },
-  { id: 'v_2_1', month: 2, name: '白喉、破傷風、百日咳及小兒麻痺混合疫苗 - 第一次' },
-  { id: 'v_2_2', month: 2, name: '肺炎球菌疫苗 - 第一次' },
-  { id: 'v_4_1', month: 4, name: '白喉、破傷風、百日咳及小兒麻痺混合疫苗 - 第二次' },
-  { id: 'v_4_2', month: 4, name: '肺炎球菌疫苗 - 第二次' },
-  { id: 'v_6_1', month: 6, name: '白喉、破傷風、百日咳及小兒麻痺混合疫苗 - 第三次' },
-  { id: 'v_6_2', month: 6, name: '肺炎球菌疫苗 - 第三次' },
+  { id: 'v_2_1', month: 2, name: '白喉、破傷風、無細胞型百日咳及滅活小兒麻痺混合疫苗 - 第一次' },
+  { id: 'v_2_2', month: 2, name: '十五價肺炎球菌結合疫苗 - 第一次' },
+  { id: 'v_4_1', month: 4, name: '白喉、破傷風、無細胞型百日咳及滅活小兒麻痺混合疫苗 - 第二次' },
+  { id: 'v_4_2', month: 4, name: '十五價肺炎球菌結合疫苗 - 第二次' },
+  { id: 'v_6_1', month: 6, name: '白喉、破傷風、無細胞型百日咳及滅活小兒麻痺混合疫苗 - 第三次' },
   { id: 'v_6_3', month: 6, name: '乙型肝炎疫苗 - 第三次' },
   { id: 'v_12_1', month: 12, name: '麻疹、流行性腮腺炎及德國麻疹混合疫苗 - 第一次' },
-  { id: 'v_12_2', month: 12, name: '肺炎球菌疫苗 - 加強劑' },
+  { id: 'v_12_2', month: 12, name: '十五價肺炎球菌結合疫苗 - 加強劑' },
   { id: 'v_12_3', month: 12, name: '水痘疫苗 - 第一次' },
+  { id: 'v_18_1', month: 18, name: '白喉、破傷風、無細胞型百日咳及滅活小兒麻痺混合疫苗 - 加強劑' },
+  { id: 'v_18_2', month: 18, name: '麻疹、流行性腮腺炎、德國麻疹及水痘混合疫苗 - 第二次' },
 ];
+
+// 曾經喺清單出現、之後修正咗嘅 id。舊記錄照樣顯示返個名，
+// 唔會變成一串認唔到嘅 id。
+export const LEGACY_VACCINE_NAMES: Record<string, string> = {
+  v_6_2: '肺炎球菌疫苗 - 第三次（已修訂：香港計劃喺 2、4 個月接種，12 個月打加強劑）',
+};
 
 // CDC / HK FHS Milestones
 // Source: CDC (Centers for Disease Control and Prevention) & HK FHS

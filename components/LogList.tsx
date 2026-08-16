@@ -3,6 +3,7 @@ import React from 'react';
 import { BabyLog, LogType, FeedLog, FeedType, DiaperLog, SleepLog, HealthLog, OtherLog, SummaryLog, TummyTimeLog, VaccineLog, MilestoneLog, PumpLog, DiaperType } from '../types';
 import { Milk, Baby, Moon, Activity, Trash2, Edit2, StickyNote, Sunrise, Sun, Sunset, MoonStar, Clock, AlertTriangle, Smile, Meh, Frown, ClipboardCheck, Star, Timer, Syringe, Flag, X, Check, Sparkles, Droplets } from 'lucide-react';
 import { HK_VACCINES, MILESTONES } from '../constants';
+import { vaccineName } from '../services/lifeEvents';
 
 interface LogListProps {
   logs: BabyLog[];
@@ -194,8 +195,7 @@ export const LogList: React.FC<LogListProps> = ({ logs, onDeleteLog, onUpdateLog
             return `${p.amountMl || 0}ml / ${p.durationMinutes || 0}分鐘`;
         case LogType.VACCINE:
             const vId = (log as VaccineLog).vaccineId;
-            const v = HK_VACCINES.find(x => x.id === vId);
-            return v ? v.name : '未知疫苗';
+            return vaccineName(vId);
         case LogType.MILESTONE:
             const ml = log as MilestoneLog;
             if (ml.title || ml.emoji) {
