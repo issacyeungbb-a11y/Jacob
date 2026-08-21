@@ -17,6 +17,10 @@ import {
   computeStats,
 } from './_shared.js';
 
+// 攞返一批記錄入面最新一條嘅實際時間戳（唔係「查詢嗰刻」，係「資料本身」）；
+// 等任何讀者可以自我核對：呢個回應究竟去到幾時嘅記錄。
+const latestOf = (arr) => (arr.length ? arr[0].timestamp : null); // arr 已經由新到舊排
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -46,6 +50,7 @@ export default async function handler(req, res) {
         baby: BABY_NAME,
         birthDate: BIRTH_DATE,
         fetchedAt: new Date().toISOString(),
+        latestTimestamp: latestOf(logs),
         query: { days: days || 7, type: type || null, summary: true },
         stats: computeStats(scoped, days || 7),
       });
@@ -58,6 +63,7 @@ export default async function handler(req, res) {
         baby: BABY_NAME,
         birthDate: BIRTH_DATE,
         fetchedAt: new Date().toISOString(),
+        latestTimestamp: latestOf(logs),
         query: { days: days || null, type: type || null },
         totalLogs: scoped.length,
         logs: scoped,
@@ -70,6 +76,7 @@ export default async function handler(req, res) {
       baby: BABY_NAME,
       birthDate: BIRTH_DATE,
       fetchedAt: new Date().toISOString(),
+      latestTimestamp: latestOf(logs),
       totalLogs: logs.length,
       totalReports: reports.length,
       logs,
